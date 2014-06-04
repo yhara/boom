@@ -2,6 +2,7 @@ require 'simplecov'
 SimpleCov.start
 
 require_relative '../boom.rb'
+include TypeInference::Type
 
 describe TypeInference do
   describe "#infer" do
@@ -12,29 +13,29 @@ describe TypeInference do
     it 'lit' do
       expr = [:lit, "int", 7]
       expect(infer(expr)).to eq(
-        [{}, [:LIT, "int"]]
+        [{}, TyRaw["int"]]
       )
     end
 
     it 'abs' do
       expr = [:abs, "x", [:var, "x"]]
       expect(infer(expr)).to eq(
-        [{}, [:FUN, [:VAR, 1], [:VAR, 1]]]
+        [{}, TyFun[TyVar[1], TyVar[1]]]
       )
     end
 
     it 'app' do
       expr = [:app, [:abs, "x", [:var, "x"]], [:lit, "int", 7]]
       expect(infer(expr)).to eq(
-        [{1 => [:LIT, "int"], 2 => [:LIT, "int"]},
-          [:LIT, "int"]]
+        [{1 => TyRaw["int"], 2 => TyRaw["int"]},
+          TyRaw["int"]]
       )
     end
 
     it 'let value' do
       expr = [:let, "x", [:lit, "int", 7], [:lit, "int", 8]]
       expect(infer(expr)).to eq(
-        [{}, [:LIT, "int"]]
+        [{}, TyRaw["int"]]
       )
     end
 
@@ -42,8 +43,8 @@ describe TypeInference do
       expr = [:let, "f", [:abs, "x", [:var, "x"]],
                [:app, [:var, "f"], [:lit, "int", 7]]]
       expect(infer(expr)).to eq(
-        [{2 => [:LIT, "int"], 3 => [:LIT, "int"]},
-          [:LIT, "int"]]
+        [{2 => TyRaw["int"], 3 => TyRaw["int"]},
+          TyRaw["int"]]
       )
     end
   end
