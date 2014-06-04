@@ -20,56 +20,57 @@ class TypeInference
   # - subst : Hash(Fixnum => Type)
 
   def self.infer(expr, env)
-    new(env).infer(1, {}, expr)
+    new(env).infer({}, expr)
   end
 
   def initialize(env)
     @env = env
+    @lastid = 0
   end
 
   # - assump : Hash(String => TypeScheme)
-  # Returns [newid, subst, type]
-  def infer(newid, assump, expr)
+  # Returns [subst, type]
+  def infer(assump, expr)
     match(expr) {
       with(_[:lit, typename, val]) {
-        [newid, {}, [:LIT, typename]]
+        [{}, [:LIT, typename]]
       }
       with(_[:ref, name]) {
         raise ProgramError if not @env.key?(name)
-        [newid, {}, @env[name]]
+        [{}, @env[name]]
       }
       with(_[:var, name]) {
         raise InferenceError if not assump.key?(name)
-        newid, var_type = instantiate(newid, assump[name])
+        var_type = instantiate(assump[name])
 
-        [newid, {}, var_type]
+        [{}, var_type]
       }
       with(_[:app, func_expr, arg_expr]) {
-        result_type = [:VAR, newid]
+        result_type = [:VAR, gen_id()]
 
-        newid, s1, func_type = infer(newid+1, assump, func_expr)
-        newid, s2, arg_type = infer(newid, substitute_assump(assump, s1), arg_expr)
+        s1, func_type = infer(assump, func_expr)
+        s2, arg_type = infer(substitute_assump(assump, s1), arg_expr)
 
         func_type = substitute(func_type, s2)
         s3 = unify(Constraint.new(func_type, [:FUN, arg_type, result_type]))
 
-        [newid, merge_substs(s1, s2, s3), substitute(result_type, s3)]
+        [merge_substs(s1, s2, s3), substitute(result_type, s3)]
       }
       with(_[:abs, name, body]) {
-        arg_type = [:VAR, newid]
+        arg_type = [:VAR, gen_id()]
         newassump = assump.merge(name => TypeScheme.new([], arg_type))
 
-        newid, s, t = infer(newid+1, newassump, body)
-        [newid, s, substitute([:FUN, arg_type, t], s)]
+        s, t = infer(newassump, body)
+        [s, substitute([:FUN, arg_type, t], s)]
       }
       with(_[:let, name, var_expr, body_expr]) {
-        newid, s1, var_type = infer(newid, assump, var_expr)
+        s1, var_type = infer(assump, var_expr)
         newassump = substitute_assump(assump, s1)
         var_ts = generalize(newassump, var_type)
 
-        newid, s2, body_type = infer(newid, newassump.merge(name => var_ts), body_expr)
+        s2, body_type = infer(newassump.merge(name => var_ts), body_expr)
 
-        [newid, merge_substs(s1, s2), body_type]
+        [merge_substs(s1, s2), body_type]
       }
       with(_) {
         raise ArgumentError, "no match: #{expr.inspect}"
@@ -133,6 +134,9 @@ class TypeInference
       with(_[:FUN, tl, tr]) {
         [:FUN, substitute(tl, subst), substitute(tr, subst)]
       }
+      with(_) {
+        raise "no match: #{type.inspect}"
+      }
     }
   end
 
@@ -142,14 +146,18 @@ class TypeInference
     end
   end
 
-  def instantiate(newid, ts)
+  def instantiate(ts)
     subst = {}
     ts.ids.each{|id|
-      subst[id] = [:VAR, newid]
-      newid += 1
+      subst[id] = [:VAR, gen_id()]
     }
 
-    [newid, substitute(ts.type, subst)]
+    substitute(ts.type, subst)
+  end
+
+  def gen_id
+    @lastid += 1
+    @lastid
   end
 
   def generalize(assump, type)
