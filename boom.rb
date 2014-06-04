@@ -114,26 +114,26 @@ class TypeInference
   end
 
     def occurs?(type, id)
-      case type.first
-      when :LIT then false
-      when :VAR then type[1] == id
-      when :FUN then occurs?(type[1], id) or occurs?(type[2], id)
-      else raise ArgumentError
-      end
+      match(type) {
+        with(_[:LIT, _]) { false }
+        with(_[:VAR, name]) { name == id }
+        with(_[:FUN, ty1, ty2]) { occurs?(ty1, id) || occurs?(ty2, id) }
+      }
     end
 
   # Returns a new type
   def substitute(type, subst)
-    case type.first
-    when :LIT
-      type
-    when :VAR
-      _, id = *type
-      if subst.key?(id) then subst[id] else type end
-    when :FUN
-      _, tl, tr = *type
-      [:FUN, substitute(tl, subst), substitute(tr, subst)]
-    end
+    match(type) {
+      with(_[:LIT, _]) {
+        type
+      }
+      with(_[:VAR, id]) {
+        if subst.key?(id) then subst[id] else type end
+      }
+      with(_[:FUN, tl, tr]) {
+        [:FUN, substitute(tl, subst), substitute(tr, subst)]
+      }
+    }
   end
 
   def substitute_assump(assump, subst)
@@ -159,12 +159,11 @@ class TypeInference
 
     # Returns Array of Fixnum(id)
     def vars_in(type)
-      case type.first
-      when :LIT then []
-      when :VAR then [type[1]]
-      when :FUN then vars_in(type[1]) + vars_in(type[2])
-      else raise ArgumentError
-      end
+      match(type) {
+        with(_[:LIT, _]) { [] }
+        with(_[:VAR, name]) { [name] }
+        with(_[:FUN, ty1, ty2]) { vars_in(ty1) + vars_in(ty2) }
+      }
     end
 
   def merge_substs(*substs)
