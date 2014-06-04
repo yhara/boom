@@ -1,11 +1,42 @@
+require 'forwardable'
 require 'pattern-match'
 
 class TypeInference
   class InferenceError < StandardError; end
   class ProgramError < StandardError; end
 
-  class Constraint < Struct.new(:lt, :rt)
-    def swap; Constraint.new(rt, lt); end
+  class Constraint 
+    def initialize(lt, rt)
+      @lt, @rt = lt, rt
+    end
+    attr_reader :lt, :rt
+
+    def swap
+      Constraint.new(@rt, @lt)
+    end
+  end
+
+  class Subst
+    extend Forwardable
+    include Enumerable
+
+    def initialize(hash={})
+      @hash = hash
+    end
+
+    def_delegators :@hash, :key?, :[], :each, :==, :merge!
+
+    def apply!(&block)
+      @hash = @hash.map{|k, v|
+        [k, block.call(v)]
+      }.to_h
+    end
+
+    def to_constr
+      @hash.map{|id, ty|
+        Constraint.new([:VAR, id], ty)
+      }
+    end
   end
 
   class TypeScheme
@@ -33,17 +64,17 @@ class TypeInference
   def infer(assump, expr)
     match(expr) {
       with(_[:lit, typename, val]) {
-        [{}, [:LIT, typename]]
+        [Subst.new, [:LIT, typename]]
       }
       with(_[:ref, name]) {
         raise ProgramError if not @env.key?(name)
-        [{}, @env[name]]
+        [Subst.new, @env[name]]
       }
       with(_[:var, name]) {
         raise InferenceError if not assump.key?(name)
         var_type = instantiate(assump[name])
 
-        [{}, var_type]
+        [Subst.new, var_type]
       }
       with(_[:app, func_expr, arg_expr]) {
         result_type = [:VAR, gen_id()]
@@ -81,7 +112,7 @@ class TypeInference
   private
 
   def unify(*constraints)
-    subst = {}
+    subst = Subst.new
     consts = constraints.dup
 
     until consts.empty?
@@ -96,10 +127,16 @@ class TypeInference
         id = con.lt[1]; rt = con.rt
         raise InferenceError if occurs?(rt, id)
 
-        sub = ->(type){ substitute(type, id => rt) }
+        subst.apply!{|type|
+          substitute(type, Subst.new({id => rt}))
+        }
+        subst.merge!({id => rt})
 
-        subst = hash_map(subst, &sub).merge({id => rt})
-        consts.map!{|c| Constraint.new(sub[c.lt], sub[c.rt]) }
+        consts.map!{|c|
+          Constraint.new(
+          substitute(c.lt, Subst.new({id => rt})),
+          substitute(c.rt, Subst.new({id => rt}))
+        )}
       when con.rt.first == :VAR
         consts.push con.swap
       when con.lt.first == :LIT && con.rt.first == :LIT
@@ -175,11 +212,7 @@ class TypeInference
     end
 
   def merge_substs(*substs)
-    constraints = substs.flat_map{|subst|
-      subst.map{|id, ty|
-        Constraint.new([:VAR, id], ty)
-      }
-    }
+    constraints = substs.flat_map(&:to_constr)
     unify(*constraints)
   end
 
