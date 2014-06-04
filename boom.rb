@@ -24,17 +24,39 @@ class TypeInference
       @hash = hash
     end
 
-    def_delegators :@hash, :key?, :[], :each, :==, :merge!
+    def_delegators :@hash, :key?, :[], :each, :==
 
-    def apply!(&block)
-      @hash = @hash.map{|k, v|
-        [k, block.call(v)]
+    def to_h
+      @hash
+    end
+
+    def merge!(other)
+      @hash = @hash.map{|id, type|
+        [id, other.apply(type)]
       }.to_h
+      @hash.merge!(other.to_h)
     end
 
     def to_constr
       @hash.map{|id, ty|
         Constraint.new([:VAR, id], ty)
+      }
+    end
+
+    def apply(type)
+      match(type) {
+        with(_[:LIT, _]) {
+          type
+        }
+        with(_[:VAR, id]) {
+          if @hash.key?(id) then @hash[id] else type end
+        }
+        with(_[:FUN, tl, tr]) {
+          [:FUN, apply(tl), apply(tr)]
+        }
+        with(_) {
+          raise "no match: #{type.inspect}"
+        }
       }
     end
   end
@@ -82,17 +104,17 @@ class TypeInference
         s1, func_type = infer(assump, func_expr)
         s2, arg_type = infer(substitute_assump(assump, s1), arg_expr)
 
-        func_type = substitute(func_type, s2)
+        func_type = s2.apply(func_type)
         s3 = unify(Constraint.new(func_type, [:FUN, arg_type, result_type]))
 
-        [merge_substs(s1, s2, s3), substitute(result_type, s3)]
+        [merge_substs(s1, s2, s3), s3.apply(result_type)]
       }
       with(_[:abs, name, body]) {
         arg_type = [:VAR, gen_id()]
         newassump = assump.merge(name => TypeScheme.new([], arg_type))
 
         s, t = infer(newassump, body)
-        [s, substitute([:FUN, arg_type, t], s)]
+        [s, s.apply([:FUN, arg_type, t])]
       }
       with(_[:let, name, var_expr, body_expr]) {
         s1, var_type = infer(assump, var_expr)
@@ -127,16 +149,9 @@ class TypeInference
         id = con.lt[1]; rt = con.rt
         raise InferenceError if occurs?(rt, id)
 
-        subst.apply!{|type|
-          substitute(type, Subst.new({id => rt}))
-        }
-        subst.merge!({id => rt})
-
-        consts.map!{|c|
-          Constraint.new(
-          substitute(c.lt, Subst.new({id => rt})),
-          substitute(c.rt, Subst.new({id => rt}))
-        )}
+        sub = Subst.new({id => rt})
+        subst.merge!(sub)
+        consts.map!{|c| Constraint.new(sub.apply(c.lt), sub.apply(c.rt))}
       when con.rt.first == :VAR
         consts.push con.swap
       when con.lt.first == :LIT && con.rt.first == :LIT
@@ -159,37 +174,18 @@ class TypeInference
       }
     end
 
-  # Returns a new type
-  def substitute(type, subst)
-    match(type) {
-      with(_[:LIT, _]) {
-        type
-      }
-      with(_[:VAR, id]) {
-        if subst.key?(id) then subst[id] else type end
-      }
-      with(_[:FUN, tl, tr]) {
-        [:FUN, substitute(tl, subst), substitute(tr, subst)]
-      }
-      with(_) {
-        raise "no match: #{type.inspect}"
-      }
-    }
-  end
-
   def substitute_assump(assump, subst)
     hash_map(assump) do |ts| 
-      TypeScheme.new(ts.ids, substitute(ts.type, subst))
+      TypeScheme.new(ts.ids, subst.apply(ts.type))
     end
   end
 
   def instantiate(ts)
-    subst = {}
-    ts.ids.each{|id|
-      subst[id] = [:VAR, gen_id()]
-    }
+    subst = Subst.new(ts.ids.map{|id|
+      [id, [:VAR, gen_id()]]
+    }.to_h)
 
-    substitute(ts.type, subst)
+    return subst.apply(ts.type)
   end
 
   def gen_id
