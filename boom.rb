@@ -29,34 +29,21 @@ class TypeInference
       @hash
     end
 
-    # TODO: better name
-    def merge!(other)
+    def add!(other)
       @hash = @hash.map{|id, type|
-        [id, other.apply(type)]
+        [id, type.substitute(other)]
       }.to_h
       @hash.merge!(other.to_h)
+    end
+
+    def merge(*others)
+      constraints = others.flat_map(&:to_constr)
+      return TypeInference.unify(*constraints)
     end
 
     def to_constr
       @hash.map{|id, ty|
         Constraint.new(Type::TyVar[id], ty)
-      }
-    end
-
-    def apply(type)
-      match(type) {
-        with(Type::TyRaw) {
-          type
-        }
-        with(Type::TyVar) {
-          if @hash.key?(type.id) then @hash[type.id] else type end
-        }
-        with(Type::TyFun) {
-          Type::TyFun[apply(type.ty1), apply(type.ty2)]
-        }
-        with(_) {
-          raise "no match: #{type.inspect}"
-        }
       }
     end
   end
@@ -76,7 +63,7 @@ class TypeInference
 
     def substitute(subst)
       Assump.new(@hash.map{|key, ts|
-        [key, TypeScheme.new(ts.ids, subst.apply(ts.type))]
+        [key, TypeScheme.new(ts.ids, ts.type.substitute(subst))]
       }.to_h)
     end
 
@@ -105,12 +92,13 @@ class TypeInference
     end
     attr_reader :ids, :type
 
+    # Create (monomorphic) type from this type scheme
     def instantiate(idgen)
       subst = Subst.new(@ids.map{|id|
         [id, Type::TyVar[idgen.new_id()]]
       }.to_h)
 
-      return subst.apply(@type)
+      return @type.substitute(subst)
     end
   end
 
@@ -124,6 +112,9 @@ class TypeInference
 
       def self.[](name); new(name); end
       def ==(other); other.is_a?(TyRaw) && other.name == @name; end
+
+      def substitute(subst); self; end
+      def occurs?(id); false; end
     end
 
     class TyVar < Base
@@ -134,6 +125,12 @@ class TypeInference
 
       def self.[](id); new(id); end
       def ==(other); other.is_a?(TyVar) && other.id == @id; end
+
+      def substitute(subst)
+        if subst.key?(@id) then subst[@id] else self end
+      end
+
+      def occurs?(id); @id == id; end
     end
 
     class TyFun < Base
@@ -145,6 +142,14 @@ class TypeInference
       def self.[](ty1, ty2); new(ty1, ty2); end
       def ==(other)
         other.is_a?(TyFun) && other.ty1 == @ty1 && other.ty2 == @ty2
+      end
+
+      def substitute(subst)
+        TyFun.new(@ty1.substitute(subst), @ty2.substitute(subst))
+      end
+
+      def occurs?(id)
+        @ty1.occurs?(id) || @ty2.occurs?(id)
       end
     end
   end
@@ -193,17 +198,18 @@ class TypeInference
         s1, func_type = infer(assump, func_expr)
         s2, arg_type = infer(assump.substitute(s1), arg_expr)
 
-        func_type = s2.apply(func_type)
-        s3 = unify(Constraint.new(func_type, Type::TyFun[arg_type, result_type]))
+        func_type = func_type.substitute(s2)
+        s3 = TypeInference.unify(Constraint.new(func_type,
+                                                Type::TyFun[arg_type, result_type]))
 
-        [merge_substs(s1, s2, s3), s3.apply(result_type)]
+        [s1.merge(s2, s3), result_type.substitute(s3)]
       }
       with(_[:abs, name, body]) {
         arg_type = Type::TyVar[gen_id()]
         newassump = assump.merge(name => TypeScheme.new([], arg_type))
 
         s, t = infer(newassump, body)
-        [s, s.apply(Type::TyFun[arg_type, t])]
+        [s, Type::TyFun[arg_type, t].substitute(s)]
       }
       with(_[:let, name, var_expr, body_expr]) {
         s1, var_type = infer(assump, var_expr)
@@ -212,7 +218,7 @@ class TypeInference
 
         s2, body_type = infer(newassump.merge(name => var_ts), body_expr)
 
-        [merge_substs(s1, s2), body_type]
+        [s1.merge(s2), body_type]
       }
       with(_) {
         raise ArgumentError, "no match: #{expr.inspect}"
@@ -220,9 +226,7 @@ class TypeInference
     }
   end
 
-  private
-
-  def unify(*constraints)
+  def self.unify(*constraints)
     subst = Subst.new
     consts = constraints.dup
 
@@ -236,11 +240,12 @@ class TypeInference
         next if con.rt == con.lt
         
         id = con.lt.id; rt = con.rt
-        raise InferenceError if occurs?(rt, id)
+        raise InferenceError if rt.occurs?(id)
 
         sub = Subst.new({id => rt})
-        subst.merge!(sub)
-        consts.map!{|c| Constraint.new(sub.apply(c.lt), sub.apply(c.rt))}
+        subst.add!(sub)
+        consts.map!{|c| Constraint.new(c.lt.substitute(sub),
+                                       c.rt.substitute(sub))}
       when con.rt.is_a?(Type::TyVar)
         consts.push con.swap
       when con.lt.is_a?(Type::TyRaw) && con.rt.is_a?(Type::TyRaw)
@@ -255,21 +260,8 @@ class TypeInference
     return subst
   end
 
-  def occurs?(type, id)
-    match(type) {
-      with(Type::TyRaw) { false }
-      with(Type::TyVar) { type.id == id }
-      with(TYpe::Fun) { occurs?(type.ty1, id) || occurs?(type.ty2, id) }
-    }
-  end
-
   def gen_id
     @idgen.new_id
-  end
-
-  def merge_substs(*substs)
-    constraints = substs.flat_map(&:to_constr)
-    unify(*constraints)
   end
 end
 
