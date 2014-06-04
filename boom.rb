@@ -18,18 +18,18 @@ class TypeInference
 
   class Subst
     extend Forwardable
-    include Enumerable
 
     def initialize(hash={})
-      @hash = hash
+      @hash = hash  # id(String) => type
     end
 
-    def_delegators :@hash, :key?, :[], :each, :==
+    def_delegators :@hash, :key?, :[], :==
 
     def to_h
       @hash
     end
 
+    # TODO: better name
     def merge!(other)
       @hash = @hash.map{|id, type|
         [id, other.apply(type)]
@@ -59,6 +59,16 @@ class TypeInference
         }
       }
     end
+  end
+
+  class Assump
+    extend Forwardable
+
+    def initialize(hash={})
+      @hash = hash  # String => TypeScheme
+    end
+
+    def_delegators :@hash, :key?, :[], :merge, :inject
   end
 
   class TypeScheme
@@ -92,7 +102,7 @@ class TypeInference
   # - subst : Hash(Fixnum => Type)
 
   def self.infer(expr, env)
-    new(env).infer({}, expr)
+    new(env).infer(Assump.new, expr)
   end
 
   def initialize(env)
@@ -100,7 +110,6 @@ class TypeInference
     @idgen = IdGen.new
   end
 
-  # - assump : Hash(String => TypeScheme)
   # Returns [subst, type]
   def infer(assump, expr)
     match(expr) {
