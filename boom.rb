@@ -68,6 +68,25 @@ class TypeInference
       @type = type
     end
     attr_reader :ids, :type
+
+    def instantiate(idgen)
+      subst = Subst.new(@ids.map{|id|
+        [id, [:VAR, idgen.new_id()]]
+      }.to_h)
+
+      return subst.apply(@type)
+    end
+  end
+
+  class IdGen
+    def initialize
+      @lastid = 0
+    end
+
+    def new_id
+      @lastid += 1
+      @lastid
+    end
   end
 
   # - subst : Hash(Fixnum => Type)
@@ -78,7 +97,7 @@ class TypeInference
 
   def initialize(env)
     @env = env
-    @lastid = 0
+    @idgen = IdGen.new
   end
 
   # - assump : Hash(String => TypeScheme)
@@ -94,7 +113,7 @@ class TypeInference
       }
       with(_[:var, name]) {
         raise InferenceError if not assump.key?(name)
-        var_type = instantiate(assump[name])
+        var_type = assump[name].instantiate(@idgen)
 
         [Subst.new, var_type]
       }
@@ -180,17 +199,8 @@ class TypeInference
     end
   end
 
-  def instantiate(ts)
-    subst = Subst.new(ts.ids.map{|id|
-      [id, [:VAR, gen_id()]]
-    }.to_h)
-
-    return subst.apply(ts.type)
-  end
-
   def gen_id
-    @lastid += 1
-    @lastid
+    @idgen.new_id
   end
 
   def generalize(assump, type)
