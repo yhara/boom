@@ -68,7 +68,7 @@ class TypeInference
       @hash = hash  # String => TypeScheme
     end
 
-    def_delegators :@hash, :key?, :[], :inject, :flat_map
+    def_delegators :@hash, :key?, :[], :inject
 
     def merge(hash)
       Assump.new(@hash.merge(hash))
@@ -78,6 +78,22 @@ class TypeInference
       Assump.new(@hash.map{|key, ts|
         [key, TypeScheme.new(ts.ids, subst.apply(ts.type))]
       }.to_h)
+    end
+
+    def generalize(type)
+      assump_vars = @hash.flat_map{|_, ts| vars_in(ts.type) - ts.ids}
+      return TypeScheme.new(vars_in(type) - assump_vars, type)
+    end
+
+    private
+
+    # Returns Array of Fixnum(id)
+    def vars_in(type)
+      match(type) {
+        with(_[:LIT, _]) { [] }
+        with(_[:VAR, name]) { [name] }
+        with(_[:FUN, ty1, ty2]) { vars_in(ty1) + vars_in(ty2) }
+      }
     end
   end
 
@@ -157,7 +173,7 @@ class TypeInference
       with(_[:let, name, var_expr, body_expr]) {
         s1, var_type = infer(assump, var_expr)
         newassump = assump.substitute(s1)
-        var_ts = generalize(newassump, var_type)
+        var_ts = newassump.generalize(var_type)
 
         s2, body_type = infer(newassump.merge(name => var_ts), body_expr)
 
@@ -215,20 +231,6 @@ class TypeInference
   def gen_id
     @idgen.new_id
   end
-
-  def generalize(assump, type)
-    assump_vars = assump.flat_map{|_, ts| vars_in(ts.type) - ts.ids}
-    TypeScheme.new(vars_in(type) - assump_vars, type)
-  end
-
-    # Returns Array of Fixnum(id)
-    def vars_in(type)
-      match(type) {
-        with(_[:LIT, _]) { [] }
-        with(_[:VAR, name]) { [name] }
-        with(_[:FUN, ty1, ty2]) { vars_in(ty1) + vars_in(ty2) }
-      }
-    end
 
   def merge_substs(*substs)
     constraints = substs.flat_map(&:to_constr)
