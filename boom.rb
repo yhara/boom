@@ -68,7 +68,17 @@ class TypeInference
       @hash = hash  # String => TypeScheme
     end
 
-    def_delegators :@hash, :key?, :[], :merge, :inject
+    def_delegators :@hash, :key?, :[], :inject, :flat_map
+
+    def merge(hash)
+      Assump.new(@hash.merge(hash))
+    end
+
+    def substitute(subst)
+      Assump.new(@hash.map{|key, ts|
+        [key, TypeScheme.new(ts.ids, subst.apply(ts.type))]
+      }.to_h)
+    end
   end
 
   class TypeScheme
@@ -130,7 +140,7 @@ class TypeInference
         result_type = [:VAR, gen_id()]
 
         s1, func_type = infer(assump, func_expr)
-        s2, arg_type = infer(substitute_assump(assump, s1), arg_expr)
+        s2, arg_type = infer(assump.substitute(s1), arg_expr)
 
         func_type = s2.apply(func_type)
         s3 = unify(Constraint.new(func_type, [:FUN, arg_type, result_type]))
@@ -146,7 +156,7 @@ class TypeInference
       }
       with(_[:let, name, var_expr, body_expr]) {
         s1, var_type = infer(assump, var_expr)
-        newassump = substitute_assump(assump, s1)
+        newassump = assump.substitute(s1)
         var_ts = generalize(newassump, var_type)
 
         s2, body_type = infer(newassump.merge(name => var_ts), body_expr)
@@ -202,12 +212,6 @@ class TypeInference
       }
     end
 
-  def substitute_assump(assump, subst)
-    hash_map(assump) do |ts| 
-      TypeScheme.new(ts.ids, subst.apply(ts.type))
-    end
-  end
-
   def gen_id
     @idgen.new_id
   end
@@ -229,13 +233,6 @@ class TypeInference
   def merge_substs(*substs)
     constraints = substs.flat_map(&:to_constr)
     unify(*constraints)
-  end
-
-  def hash_map(hash, &block)
-    hash.inject({}) do |h, (k, v)|
-      h[k] = yield v
-      h
-    end
   end
 end
 
