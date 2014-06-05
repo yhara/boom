@@ -75,11 +75,12 @@ class TypeInference
     end
   end
 
+  # Type environment
   class Assump
     extend Forwardable
 
     def initialize(hash={})
-      @hash = hash  # String => TypeScheme
+      @hash = hash  # String(ident) => TypeScheme
     end
 
     def_delegators :@hash, :key?, :[], :inject
@@ -146,6 +147,7 @@ class TypeInference
       def self.[](name); new(name); end
       def ==(other); other.is_a?(TyRaw) && other.name == @name; end
       def self.deconstruct(val); super; [val.name]; end
+      def inspect(inner=false); inner ? @name : "Ty(#{@name})"; end
 
       def substitute(subst); self; end
       def occurs?(id); false; end
@@ -161,6 +163,7 @@ class TypeInference
       def self.[](id); new(id); end
       def ==(other); other.is_a?(TyVar) && other.id == @id; end
       def self.deconstruct(val); super; [val.id]; end
+      def inspect(inner=false); inner ? @id.to_s : "Ty(#{@id})"; end
 
       def substitute(subst)
         if subst.key?(@id) then subst[@id] else self end
@@ -180,6 +183,7 @@ class TypeInference
         other.is_a?(TyFun) && other.ty1 == @ty1 && other.ty2 == @ty2
       end
       def self.deconstruct(val); super; [val.ty1, val.ty2]; end
+      def inspect(inner=false); "Ty(#{@ty1.inspect(true)} -> #{@ty2.inspect(true)})"; end
 
       def substitute(subst)
         TyFun.new(@ty1.substitute(subst), @ty2.substitute(subst))
@@ -201,13 +205,12 @@ class TypeInference
     end
   end
 
-
   def self.infer(expr, env)
-    new(env).infer(Assump.new, expr)
+    assump = Assump.new(env.apply{|type| TypeScheme.new([], type)})
+    new.infer(assump, expr)
   end
 
-  def initialize(env)
-    @env = env
+  def initialize
     @idgen = IdGen.new
   end
 
@@ -216,10 +219,6 @@ class TypeInference
     match(expr) {
       with(_[:lit, typename, val]) {
         [Subst.empty, TyRaw[typename]]
-      }
-      with(_[:ref, name]) {
-        raise ProgramError if not @env.key?(name)
-        [Subst.empty, @env[name]]
       }
       with(_[:var, name]) {
         raise InferenceError if not assump.key?(name)
@@ -301,14 +300,15 @@ class TypeInference
 end
 
 if $0==__FILE__
+  include TypeInference::Type
 
   # f = ^(x){ x }
   # f(succ)
 
   expr = [:let, "f", [:abs, "x", [:var, "x"]],
-            [:app, [:var, "f"], [:ref, "succ"]]]
+            [:app, [:var, "f"], [:var, "succ"]]]
   env = {
-    "succ" => [:FUN, [:LIT, "int"], [:LIT, "int"]],
+    "succ" => TyFun[TyRaw["int"], TyRaw["int"]],
     #"plus" => [:FUN, [:VAR, 0], [:VAR, 0]]
   }
   require 'pp'

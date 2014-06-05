@@ -47,5 +47,18 @@ describe TypeInference do
           TyRaw["int"]]
       )
     end
+
+    it 'with predefined funcs' do
+      expr = [:let, "f", [:abs, "x", [:var, "x"]],
+                [:app, [:var, "f"], [:var, "succ"]]]
+      ty_int_int = TyFun[TyRaw["int"], TyRaw["int"]]
+      env = {
+        "succ" => ty_int_int,
+      }
+      expect(TypeInference.infer(expr, env)).to eq(
+        [{2 => ty_int_int, 3 => ty_int_int},
+         ty_int_int]
+      )
+    end
   end
 end
