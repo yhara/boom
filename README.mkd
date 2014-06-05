@@ -3,5 +3,8 @@ wip
 History
 =======
 
+- 0.0.2 (2014/06/05)
+  - Evaluator
+  - Predefined library (`print`)
 - 0.0.1 (2014/06/05)
   - Type inference of expression
