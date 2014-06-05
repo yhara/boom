@@ -94,20 +94,14 @@ class TypeInference
       }.to_h)
     end
 
+    # Create polymorphic typescheme
     def generalize(type)
-      assump_vars = @hash.flat_map{|_, ts| vars_in(ts.type) - ts.ids}
-      return TypeScheme.new(vars_in(type) - assump_vars, type)
-    end
+      tss = @hash.values
+      free_type_ids = tss.flat_map(&:free_type_ids)
 
-    private
-
-    # Returns Array of Fixnum(id)
-    def vars_in(type)
-      match(type) {
-        with(Type::TyRaw) { [] }
-        with(Type::TyVar.(id)) { [id] }
-        with(Type::TyFun.(ty1, ty2)) { vars_in(ty1) + vars_in(ty2) }
-      }
+      # Types defined in elsewhere should not be type varible 
+      typevars = type.var_ids - free_type_ids
+      return TypeScheme.new(typevars, type)
     end
   end
 
@@ -126,6 +120,11 @@ class TypeInference
       }.to_h)
 
       return @type.substitute(subst)
+    end
+
+    # Variables of outer environment
+    def free_type_ids
+      @type.var_ids - @ids
     end
   end
 
@@ -148,6 +147,7 @@ class TypeInference
 
       def substitute(subst); self; end
       def occurs?(id); false; end
+      def var_ids; []; end
     end
 
     class TyVar < Base
@@ -163,8 +163,8 @@ class TypeInference
       def substitute(subst)
         if subst.key?(@id) then subst[@id] else self end
       end
-
       def occurs?(id); @id == id; end
+      def var_ids; [@id]; end
     end
 
     class TyFun < Base
@@ -182,10 +182,8 @@ class TypeInference
       def substitute(subst)
         TyFun.new(@ty1.substitute(subst), @ty2.substitute(subst))
       end
-
-      def occurs?(id)
-        @ty1.occurs?(id) || @ty2.occurs?(id)
-      end
+      def occurs?(id); @ty1.occurs?(id) || @ty2.occurs?(id); end
+      def var_ids; @ty1.var_ids + @ty2.var_ids; end
     end
   end
   include Type
