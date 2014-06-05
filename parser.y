@@ -3,7 +3,13 @@ class Parser
 rule
   toplevel: program
 
-  program: exprs
+  program: exprs 
+    | defun exprs
+    { [:SEQ, val[0], val[1]] }
+
+  defun: 
+    DEF_ _IDENT LPAREN _IDENT RPAREN expr END_
+    { [:DEFUN, val[1], val[3], val[5]] }
   
   exprs: expr
 
@@ -88,7 +94,7 @@ require 'strscan'
 
   private
 
-  KEYWORDS = %w(if then else true false succ pred iszero def fn)
+  KEYWORDS = %w(if then else true false succ pred iszero def fn end)
   KEYWORDS_REXP = Regexp.new(KEYWORDS.join("|"))
   SYMBOLS = {
     "_"   => "USCORE",

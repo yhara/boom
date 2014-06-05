@@ -30,6 +30,16 @@ describe Evaluator do
     )
   end
 
+  it 'defun' do
+    src = <<-EOD
+      def f(x)
+        x
+      end
+      f(1)
+    EOD
+    expect(run(src)).to eq(1) 
+  end
+
   context 'wrong program' do
     it 'parse error' do
       expect{
