@@ -1,6 +1,10 @@
 require 'forwardable'
 require 'pattern-match'
 
+system 'racc parser.y -o parser.rb'
+require_relative 'parser.rb'
+require_relative 'normalizer.rb'
+
 class TypeInference
   module HashApply
     refine Hash do

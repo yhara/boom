@@ -1,7 +1,4 @@
-require 'simplecov'
-SimpleCov.start
-
-require_relative '../boom.rb'
+require_relative 'spec_helper'
 include TypeInference::Type
 
 describe TypeInference do
