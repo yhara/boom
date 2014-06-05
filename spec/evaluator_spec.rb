@@ -31,6 +31,12 @@ describe Evaluator do
   end
 
   context 'wrong program' do
+    it 'parse error' do
+      expect{
+        run("print(")
+      }.to raise_error(Racc::ParseError)
+    end
+
     it 'type error' do
       expect{
         run("print(1)")
