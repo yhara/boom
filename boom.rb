@@ -2,6 +2,15 @@ require 'forwardable'
 require 'pattern-match'
 
 class TypeInference
+  module HashApply
+    refine Hash do
+      def apply(&block)
+        self.map{|k, v| [k, block.call(v)]}.to_h
+      end
+    end
+  end
+  using HashApply
+
   class InferenceError < StandardError; end
   class ProgramError < StandardError; end
 
@@ -28,15 +37,6 @@ class TypeInference
 
   class Subst
     extend Forwardable
-
-    module HashApply
-      refine Hash do
-        def apply(&block)
-          self.map{|k, v| [k, block.call(v)]}.to_h
-        end
-      end
-    end
-    using HashApply
 
     def self.[](id, ty)
       Subst.new({id => ty})
@@ -89,9 +89,7 @@ class TypeInference
     end
 
     def substitute(subst)
-      Assump.new(@hash.map{|key, ts|
-        [key, TypeScheme.new(ts.ids, ts.type.substitute(subst))]
-      }.to_h)
+      Assump.new(@hash.apply{|ts| ts.substitute(subst)})
     end
 
     # Create polymorphic typescheme
@@ -112,6 +110,10 @@ class TypeInference
       @type = type
     end
     attr_reader :ids, :type
+
+    def substitute(subst)
+      TypeScheme.new(@ids, @type.substitute(subst))
+    end
 
     # Create (monomorphic) type from this type scheme
     def instantiate(idgen)
