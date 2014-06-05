@@ -29,4 +29,12 @@ describe Evaluator do
       "Hello, world!"
     )
   end
+
+  context 'wrong program' do
+    it 'type error' do
+      expect{
+        run("print(1)")
+      }.to raise_error(TypeInference::InferenceError)
+    end
+  end
 end
