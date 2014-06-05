@@ -23,10 +23,13 @@ rule
     _IDENT
     { [:VARREF, val[0]] }
 
-  literal: number
+  literal: number | string
 
   number: 
     _INT { [:CONST, val[0]] }
+
+  string:
+    _STRING { [:CONST, val[0]] }
 
 #  toplevel : Term { val[0] }
 #
@@ -90,7 +93,7 @@ require 'strscan'
   SYMBOLS = {
     "_"   => "USCORE",
     "'"   => "APOSTROPHE",
-    "\""  => "DQUOTE",
+    #"\""  => "DQUOTE",
     "!"   => "BANG",
     "#"   => "HASH",
     "$"   => "TRIANGLE",
@@ -136,6 +139,10 @@ require 'strscan'
       when (s = @s.scan(/\d+/))
         n = s.to_i
         yield [:_INT, n]
+      when @s.scan(/"/)
+        s = @s.scan_until(/"/)
+        raise "unterminated string" if s.nil?
+        yield [:_STRING, s.chop]
       when (s = @s.scan(/[A-Za-z][0-9A-Za-z]*/))
         yield [:_IDENT, s]
       when @s.scan(/\s+/)

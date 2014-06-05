@@ -5,6 +5,8 @@ class Normalizer
         case val
         when Integer
           [:lit, "int", val]
+        when String
+          [:lit, "string", val]
         else raise
         end
       }

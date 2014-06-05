@@ -25,6 +25,8 @@ describe Evaluator do
   end
 
   it 'library' do
-    expect(capture{ run("print(1)") }).to eq("1")
+    expect(capture{ run("print(\"Hello, world!\")") }).to eq(
+      "Hello, world!"
+    )
   end
 end

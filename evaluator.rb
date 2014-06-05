@@ -13,8 +13,9 @@ class Evaluator
 
   include TypeInference::Type
   INT = TyRaw["int"]
+  STRING = TyRaw["string"]
   LIBRARY = {
-    "print" => [TyFun[INT, INT], ->(arg) { $stdout.print(arg) }]
+    "print" => [TyFun[STRING, STRING], ->(arg) { $stdout.print(arg); arg }]
   }
 
   class Env
