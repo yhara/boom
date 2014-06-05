@@ -19,6 +19,11 @@ class TypeInference
     def swap
       Constraint.new(@rt, @lt)
     end
+
+    def substitute(subst)
+      Constraint.new(@lt.substitute(subst),
+                     @rt.substitute(subst))
+    end
   end
 
   class Subst
@@ -258,8 +263,7 @@ class TypeInference
 
           sub = Subst.new({id => ty2})
           subst.add!(sub)
-          consts.map!{|c| Constraint.new(c.lt.substitute(sub),
-                                         c.rt.substitute(sub))}
+          consts.map!{|con| con.substitute(sub)}
         }
         with(Constraint.(ty1, TyVar.(id))) {
           consts.push con.swap
