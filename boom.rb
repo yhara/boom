@@ -78,8 +78,8 @@ class TypeInference
     def vars_in(type)
       match(type) {
         with(Type::TyRaw) { [] }
-        with(Type::TyVar) { [type.id] }
-        with(Type::TyFun) { vars_in(type.ty1) + vars_in(type.ty2) }
+        with(Type::TyVar.(id)) { [id] }
+        with(Type::TyFun.(ty1, ty2)) { vars_in(ty1) + vars_in(ty2) }
       }
     end
   end
@@ -103,7 +103,12 @@ class TypeInference
   end
 
   module Type
-    class Base; end
+    class Base
+      include PatternMatch::Deconstructable
+
+      def self.deconstruct(val); accept_self_instance_only(val); end
+    end
+
     class TyRaw < Base
       def initialize(name)
         @name = name
@@ -112,6 +117,7 @@ class TypeInference
 
       def self.[](name); new(name); end
       def ==(other); other.is_a?(TyRaw) && other.name == @name; end
+      def self.deconstruct(val); super; [val.name]; end
 
       def substitute(subst); self; end
       def occurs?(id); false; end
@@ -125,6 +131,7 @@ class TypeInference
 
       def self.[](id); new(id); end
       def ==(other); other.is_a?(TyVar) && other.id == @id; end
+      def self.deconstruct(val); super; [val.id]; end
 
       def substitute(subst)
         if subst.key?(@id) then subst[@id] else self end
@@ -143,6 +150,7 @@ class TypeInference
       def ==(other)
         other.is_a?(TyFun) && other.ty1 == @ty1 && other.ty2 == @ty2
       end
+      def self.deconstruct(val); super; [val.ty1, val.ty2]; end
 
       def substitute(subst)
         TyFun.new(@ty1.substitute(subst), @ty2.substitute(subst))
