@@ -11,6 +11,11 @@ class TypeInference
     end
     attr_reader :lt, :rt
 
+    def self.deconstruct(val)
+      accept_self_instance_only(val)
+      [val.lt, val.rt]
+    end
+
     def swap
       Constraint.new(@rt, @lt)
     end
@@ -161,6 +166,7 @@ class TypeInference
       end
     end
   end
+  include Type
 
   class IdGen
     def initialize
@@ -173,7 +179,6 @@ class TypeInference
     end
   end
 
-  # - subst : Hash(Fixnum => Type)
 
   def self.infer(expr, env)
     new(env).infer(Assump.new, expr)
@@ -188,7 +193,7 @@ class TypeInference
   def infer(assump, expr)
     match(expr) {
       with(_[:lit, typename, val]) {
-        [Subst.new, Type::TyRaw[typename]]
+        [Subst.new, TyRaw[typename]]
       }
       with(_[:ref, name]) {
         raise ProgramError if not @env.key?(name)
@@ -201,23 +206,23 @@ class TypeInference
         [Subst.new, var_type]
       }
       with(_[:app, func_expr, arg_expr]) {
-        result_type = Type::TyVar[gen_id()]
+        result_type = TyVar[gen_id()]
 
         s1, func_type = infer(assump, func_expr)
         s2, arg_type = infer(assump.substitute(s1), arg_expr)
 
         func_type = func_type.substitute(s2)
         s3 = TypeInference.unify(Constraint.new(func_type,
-                                                Type::TyFun[arg_type, result_type]))
+                                                TyFun[arg_type, result_type]))
 
         [s1.merge(s2, s3), result_type.substitute(s3)]
       }
       with(_[:abs, name, body]) {
-        arg_type = Type::TyVar[gen_id()]
+        arg_type = TyVar[gen_id()]
         newassump = assump.merge(name => TypeScheme.new([], arg_type))
 
         s, t = infer(newassump, body)
-        [s, Type::TyFun[arg_type, t].substitute(s)]
+        [s, TyFun[arg_type, t].substitute(s)]
       }
       with(_[:let, name, var_expr, body_expr]) {
         s1, var_type = infer(assump, var_expr)
@@ -240,29 +245,31 @@ class TypeInference
 
     until consts.empty?
       con = consts.pop
-      case
-      when con.lt.is_a?(Type::TyFun) && con.rt.is_a?(Type::TyFun)
-        consts.push Constraint.new(con.lt.ty1, con.rt.ty1)
-        consts.push Constraint.new(con.lt.ty2, con.rt.ty2)
-      when con.lt.is_a?(Type::TyVar)
-        next if con.rt == con.lt
-        
-        id = con.lt.id; rt = con.rt
-        raise InferenceError if rt.occurs?(id)
+      match(con) {
+        with(Constraint.(TyFun.(lty1, lty2), TyFun.(rty1, rty2))) {
+          consts.push Constraint.new(lty1, rty1)
+          consts.push Constraint.new(lty2, rty2)
+        }
+        with(Constraint.(TyVar.(id), TyVar.(id))) {
+          # just skip
+        }
+        with(Constraint.(TyVar.(id), ty2)) {
+          raise InferenceError if ty2.occurs?(id)
 
-        sub = Subst.new({id => rt})
-        subst.add!(sub)
-        consts.map!{|c| Constraint.new(c.lt.substitute(sub),
-                                       c.rt.substitute(sub))}
-      when con.rt.is_a?(Type::TyVar)
-        consts.push con.swap
-      when con.lt.is_a?(Type::TyRaw) && con.rt.is_a?(Type::TyRaw)
-        if con.lt.name != con.rt.name
-          raise InferenceError, "type mismatch: #{con.lt.name} vs #{con.rt.name}"
-        end
-      else
-        raise
-      end
+          sub = Subst.new({id => ty2})
+          subst.add!(sub)
+          consts.map!{|c| Constraint.new(c.lt.substitute(sub),
+                                         c.rt.substitute(sub))}
+        }
+        with(Constraint.(ty1, TyVar.(id))) {
+          consts.push con.swap
+        }
+        with(Constraint.(TyRaw.(name1), TyRaw.(name2))) {
+          if name1 != name2
+            raise InferenceError, "type mismatch: #{name1} vs #{name2}"
+          end
+        }
+      }
     end
 
     return subst
