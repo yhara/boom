@@ -24,6 +24,11 @@ class Normalizer
           [:abs, argname, normalize(body)],
           normalize(expr2)]
       }
+      with(_[:SEQ, _[:DEFVAR, varname, expr], expr2]) {
+        [:let, varname,
+          normalize(expr),
+          normalize(expr2)]
+      }
       with(_[:SEQ, expr1, expr2]) {
         [:seq, normalize(expr1), normalize(expr2)]
       }

@@ -10,11 +10,15 @@ rule
     { [:SEQ, val[0], val[1]] }
     | stmt
 
-  stmt: expr | defun
+  stmt: expr | defun | defvar
 
   defun: 
     DEF_ _IDENT LPAREN _IDENT RPAREN expr END_
     { [:DEFUN, val[1], val[3], val[5]] }
+
+  defvar:
+    _IDENT EQ expr
+    { [:DEFVAR, val[0], val[2]] }
 
   expr: value
   

@@ -33,6 +33,13 @@ describe Evaluator do
     expect(run(src)).to eq(1) 
   end
 
+  it 'defvar' do
+    expect(run(<<-EOD)).to eq(1)
+      x = 1
+      x
+    EOD
+  end
+
   it 'seq' do
     src = <<-EOD
       print("a")
