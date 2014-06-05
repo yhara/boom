@@ -29,6 +29,23 @@ class TypeInference
   class Subst
     extend Forwardable
 
+    module HashApply
+      refine Hash do
+        def apply(&block)
+          self.map{|k, v| [k, block.call(v)]}.to_h
+        end
+      end
+    end
+    using HashApply
+
+    def self.[](id, ty)
+      Subst.new({id => ty})
+    end
+
+    def self.empty
+      Subst.new({})
+    end
+
     def initialize(hash={})
       @hash = hash  # id(String) => type
     end
@@ -39,11 +56,11 @@ class TypeInference
       @hash
     end
 
-    def add!(other)
-      @hash = @hash.map{|id, type|
-        [id, type.substitute(other)]
-      }.to_h
-      @hash.merge!(other.to_h)
+    def add(id, type)
+      Subst.new(
+        @hash.apply{|ty| ty.substitute(Subst[id, type])}
+             .merge({id => type})
+      )
     end
 
     def merge(*others)
@@ -198,17 +215,17 @@ class TypeInference
   def infer(assump, expr)
     match(expr) {
       with(_[:lit, typename, val]) {
-        [Subst.new, TyRaw[typename]]
+        [Subst.empty, TyRaw[typename]]
       }
       with(_[:ref, name]) {
         raise ProgramError if not @env.key?(name)
-        [Subst.new, @env[name]]
+        [Subst.empty, @env[name]]
       }
       with(_[:var, name]) {
         raise InferenceError if not assump.key?(name)
         var_type = assump[name].instantiate(@idgen)
 
-        [Subst.new, var_type]
+        [Subst.empty, var_type]
       }
       with(_[:app, func_expr, arg_expr]) {
         result_type = TyVar[gen_id()]
@@ -224,17 +241,17 @@ class TypeInference
       }
       with(_[:abs, name, body]) {
         arg_type = TyVar[gen_id()]
-        newassump = assump.merge(name => TypeScheme.new([], arg_type))
+        inner_assump = assump.merge(name => TypeScheme.new([], arg_type))
 
-        s, t = infer(newassump, body)
+        s, t = infer(inner_assump, body)
         [s, TyFun[arg_type, t].substitute(s)]
       }
       with(_[:let, name, var_expr, body_expr]) {
         s1, var_type = infer(assump, var_expr)
-        newassump = assump.substitute(s1)
-        var_ts = newassump.generalize(var_type)
+        inner_assump = assump.substitute(s1)
+        var_ts = inner_assump.generalize(var_type)
 
-        s2, body_type = infer(newassump.merge(name => var_ts), body_expr)
+        s2, body_type = infer(inner_assump.merge(name => var_ts), body_expr)
 
         [s1.merge(s2), body_type]
       }
@@ -261,9 +278,8 @@ class TypeInference
         with(Constraint.(TyVar.(id), ty2)) {
           raise InferenceError if ty2.occurs?(id)
 
-          sub = Subst.new({id => ty2})
-          subst.add!(sub)
-          consts.map!{|con| con.substitute(sub)}
+          subst = subst.add(id, ty2)
+          consts.map!{|con| con.substitute(Subst[id, ty2])}
         }
         with(Constraint.(ty1, TyVar.(id))) {
           consts.push con.swap
