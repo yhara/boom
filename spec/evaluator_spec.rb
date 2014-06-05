@@ -1,11 +1,30 @@
+require 'stringio'
 require_relative 'spec_helper'
 
 describe Evaluator do
+  def run(str)
+    Evaluator.run(str)
+  end
+  
+  def capture(&block)
+    io = StringIO.new
+    orig_out = $stdout
+    $stdout = io
+    block.call
+    io.string
+  ensure
+    $stdout = orig_out
+  end
+
   it 'const' do
-    expect(Evaluator.run("1")).to eq(1)
+    expect(run("1")).to eq(1)
   end
 
   it 'funcall' do
-    expect(Evaluator.run("fn(x){ 1 }(2)")).to eq(1)
+    expect(run("fn(x){ 1 }(2)")).to eq(1)
+  end
+
+  it 'library' do
+    expect(capture{ run("print(1)") }).to eq("1")
   end
 end

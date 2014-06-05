@@ -1,13 +1,21 @@
 require 'forwardable'
 
 class Evaluator
-  def self.run(str, library={})
+  def self.run(str, library=LIBRARY)
     expr = Parser.parse(str)
     TypeInference.infer(expr, library)
 
-    env = Env.new
+    env = Env.new(library.map{|name, (type, block)|
+      [name, Func.new(&block)]
+    }.to_h)
     new.eval(env, expr)
   end
+
+  include TypeInference::Type
+  INT = TyRaw["int"]
+  LIBRARY = {
+    "print" => [TyFun[INT, INT], ->(arg) { $stdout.print(arg) }]
+  }
 
   class Env
     extend Forwardable
