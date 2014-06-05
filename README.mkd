@@ -1,7 +1,19 @@
+Boom
+====
+
 wip
 
+A toy language with type inference.
+
+Acknowledgements
+----------------
+
+* https://github.com/pi8027/typeinfer
+* TAPL
+* http://www.amazon.co.jp/gp/product/4781912850?tag=yharaharay-22
+
 History
-=======
+-------
 
 - v0.0.2 (2014/06/05)
   - Evaluator
