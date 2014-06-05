@@ -45,6 +45,17 @@ describe TypeInference do
       )
     end
 
+    it 'seq' do
+      expr = [:let, "f", [:abs, "x", [:lit, "int", 8]],
+               [:seq, [:app, [:var, "f"], [:lit, "int", 7]],
+               [:seq, [:app, [:var, "f"], [:lit, "string", "hi"]],
+                      [:var, "f"]]]]
+                     
+      expect(infer(expr)).to eq(
+        [{}, TyFun[TyVar[6], TyRaw["int"]]]
+      )
+    end
+
     it 'with predefined funcs' do
       expr = [:let, "f", [:abs, "x", [:var, "x"]],
                 [:app, [:var, "f"], [:var, "succ"]]]

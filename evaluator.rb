@@ -1,22 +1,31 @@
 require 'forwardable'
 
 class Evaluator
-  def self.run(str, library=LIBRARY)
+  def self.run(str, library: LIBRARY, io: [$stdin, $stdout])
     expr = Parser.parse(str)
     TypeInference.infer(expr, library)
 
+    system = System.new(io)
     env = Env.new(library.map{|name, (type, block)|
-      [name, Func.new(&block)]
+      [name, block]
     }.to_h)
-    new.eval(env, expr)
+    new(system).eval(env, expr)
   end
 
   include TypeInference::Type
   INT = TyRaw["int"]
   STRING = TyRaw["string"]
   LIBRARY = {
-    "print" => [TyFun[STRING, STRING], ->(arg) { $stdout.print(arg); arg }]
+    "print" => [TyFun[STRING, STRING], ->(system, arg) { system.out.print(arg); arg }]
   }
+
+  class System
+    def initialize(io)
+      @io = io
+    end
+    def in; @io[0]; end
+    def out; @io[1]; end
+  end
 
   class Env
     extend Forwardable
@@ -31,14 +40,8 @@ class Evaluator
     end
   end
 
-  class Func
-    def initialize(&block)
-      @block = block
-    end
-
-    def invoke(arg)
-      @block.call(arg)
-    end
+  def initialize(system)
+    @system = system
   end
 
   def eval(env, expr)
@@ -54,21 +57,25 @@ class Evaluator
       }
       with(_[:abs, name, body]) {
         name_, body_ = name, body
-        Func.new{|arg|
+        lambda{|system, arg|
           eval(env.merge(name_, arg), body_)
         }
       }
       with(_[:app, funexpr, argexpr]) {
         arg = eval(env, argexpr)
         fun = eval(env, funexpr)
-        unless fun.is_a?(Func)
+        unless fun.is_a?(Proc)
           raise "cannot apply: #{fun.inspect} (#{arg.inspect})"
         end
-        fun.invoke(arg)
+        fun.call(@system, arg)
       }
       with(_[:let, name, varexpr, bodyexpr]) {
         var = eval(env, varexpr)
         eval(env.merge(name, var), bodyexpr)
+      }
+      with(_[:seq, expr1, expr2]) {
+        eval(env, expr1)
+        eval(env, expr2)
       }
       with(_){ raise "no match: #{expr.inspect}" }
     }

@@ -253,6 +253,11 @@ class TypeInference
 
         [s1.merge(s2), body_type]
       }
+      with(_[:seq, expr1, expr2]) {
+        s1, ty1 = infer(assump, expr1)
+        s2, ty2 = infer(assump.substitute(s1), expr2)
+        [s1.merge(s2), ty2]
+      }
       with(_) {
         raise ArgumentError, "no match: #{expr.inspect}"
       }

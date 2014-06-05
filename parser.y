@@ -3,22 +3,25 @@ class Parser
 rule
   toplevel: program
 
-  program: exprs 
-    | defun exprs
+  program: stmts 
+
+  stmts: 
+    | stmts stmt
     { [:SEQ, val[0], val[1]] }
+    | stmt
+
+  stmt: expr | defun
 
   defun: 
     DEF_ _IDENT LPAREN _IDENT RPAREN expr END_
     { [:DEFUN, val[1], val[3], val[5]] }
-  
-  exprs: expr
 
   expr: value
   
   value: anonfunc | funcall | varref | literal
 
   anonfunc: 
-    FN_ LPAREN _IDENT RPAREN LBRACE exprs RBRACE
+    FN_ LPAREN _IDENT RPAREN LBRACE stmts RBRACE
     { [:FN, val[2], val[5]] }
 
   funcall:

@@ -3,19 +3,13 @@ require_relative 'spec_helper'
 
 describe Evaluator do
   def run(str)
-    Evaluator.run(str)
-  end
-  
-  def capture(&block)
-    io = StringIO.new
-    orig_out = $stdout
-    $stdout = io
-    block.call
-    io.string
-  ensure
-    $stdout = orig_out
+    Evaluator.run(str, io: [$stdin, @out])
   end
 
+  before do
+    @out = StringIO.new
+  end
+  
   it 'const' do
     expect(run("1")).to eq(1)
   end
@@ -25,9 +19,8 @@ describe Evaluator do
   end
 
   it 'library' do
-    expect(capture{ run("print(\"Hello, world!\")") }).to eq(
-      "Hello, world!"
-    )
+    run("print(\"Hello, world!\")")
+    expect(@out.string).to eq("Hello, world!")
   end
 
   it 'defun' do
@@ -38,6 +31,15 @@ describe Evaluator do
       f(1)
     EOD
     expect(run(src)).to eq(1) 
+  end
+
+  it 'seq' do
+    src = <<-EOD
+      print("a")
+      print("b")
+    EOD
+    run(src)
+    expect(@out.string).to eq("ab") 
   end
 
   context 'wrong program' do
