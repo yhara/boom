@@ -4,6 +4,7 @@ require 'pattern-match'
 system 'racc parser.y -o parser.rb'
 require_relative 'parser.rb'
 require_relative 'normalizer.rb'
+require_relative 'evaluator.rb'
 
 class TypeInference
   module HashApply
@@ -209,8 +210,8 @@ class TypeInference
     end
   end
 
-  def self.infer(expr, env)
-    assump = Assump.new(env.apply{|type| TypeScheme.new([], type)})
+  def self.infer(expr, library={})
+    assump = Assump.new(library.apply{|type| TypeScheme.new([], type)})
     new.infer(assump, expr)
   end
 
