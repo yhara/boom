@@ -5,6 +5,28 @@ wip
 
 A toy language with type inference.
 
+Design
+------
+
+```
+  Source Code
+
+fn(x) { x }
+
+  ↓ Parser
+
+[:FN, "x", [:VARREF, "x"]]
+
+  ↓ Normalizer
+
+[:abs, "x", [:var, "x"]]
+
+  ↓ Evaluator
+
+(result)
+```
+
+
 Acknowledgements
 ----------------
 
