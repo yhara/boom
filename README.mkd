@@ -37,6 +37,9 @@ Acknowledgements
 History
 -------
 
+- v0.1.0 (2014/06/06)
+  - README, etc.
+  - defvar, seq
 - v0.0.2 (2014/06/05)
   - Evaluator
   - Predefined library (`print`)
