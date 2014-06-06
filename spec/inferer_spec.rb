@@ -15,14 +15,14 @@ describe TypeInference do
     end
 
     it 'abs' do
-      expr = [:abs, "x", [:var, "x"]]
+      expr = [:abs, "x", nil, [:var, "x"]]
       expect(infer(expr)).to eq(
         [{}, TyFun[TyVar[1], TyVar[1]]]
       )
     end
 
     it 'app' do
-      expr = [:app, [:abs, "x", [:var, "x"]], [:lit, "int", 7]]
+      expr = [:app, [:abs, "x", nil, [:var, "x"]], [:lit, "int", 7]]
       expect(infer(expr)).to eq(
         [{1 => TyRaw["int"], 2 => TyRaw["int"]},
           TyRaw["int"]]
@@ -37,7 +37,7 @@ describe TypeInference do
     end
 
     it 'let func' do
-      expr = [:let, "f", [:abs, "x", [:var, "x"]],
+      expr = [:let, "f", [:abs, "x", nil, [:var, "x"]],
                [:app, [:var, "f"], [:lit, "int", 7]]]
       expect(infer(expr)).to eq(
         [{2 => TyRaw["int"], 3 => TyRaw["int"]},
@@ -46,7 +46,7 @@ describe TypeInference do
     end
 
     it 'seq' do
-      expr = [:let, "f", [:abs, "x", [:lit, "int", 8]],
+      expr = [:let, "f", [:abs, "x", nil, [:lit, "int", 8]],
                [:seq, [:app, [:var, "f"], [:lit, "int", 7]],
                [:seq, [:app, [:var, "f"], [:lit, "string", "hi"]],
                       [:var, "f"]]]]
@@ -57,7 +57,7 @@ describe TypeInference do
     end
 
     it 'with predefined funcs' do
-      expr = [:let, "f", [:abs, "x", [:var, "x"]],
+      expr = [:let, "f", [:abs, "x", nil, [:var, "x"]],
                 [:app, [:var, "f"], [:var, "succ"]]]
       ty_int_int = TyFun[TyRaw["int"], TyRaw["int"]]
       env = {

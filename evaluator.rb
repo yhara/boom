@@ -55,7 +55,7 @@ class Evaluator
         end
         env[name]
       }
-      with(_[:abs, name, body]) {
+      with(_[:abs, name, opt_typename, body]) {
         name_, body_ = name, body
         lambda{|system, arg|
           eval(env.merge(name_, arg), body_)

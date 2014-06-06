@@ -14,14 +14,14 @@ class Normalizer
         [:var, varname]
       }
       with(_[:FN, varname, body]) {
-        [:abs, varname, normalize(body)]
+        [:abs, varname, nil, normalize(body)]
       }
       with(_[:APP, funexpr, argexpr]) {
         [:app, normalize(funexpr), normalize(argexpr)]
       }
       with(_[:SEQ, _[:DEFUN, funname, argname, argtyname, body], expr2]) {
         [:let, funname,
-          [:abs, argname, normalize(body)],
+          [:abs, argname, argtyname, normalize(body)],
           normalize(expr2)]
       }
       with(_[:SEQ, _[:DEFVAR, varname, expr], expr2]) {

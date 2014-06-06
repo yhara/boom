@@ -237,15 +237,9 @@ class TypeInference
 
         [s1.merge(s2, s3), result_type.substitute(s3)]
       }
-      with(_[:abs, name, body]) {
-        arg_ts = TypeScheme.new([], TyVar[gen_id()])
-        inner_assump = assump.merge(name => arg_ts)
-
-        s, body_type = infer(inner_assump, body)
-        [s, TyFun[arg_ts.type, body_type].substitute(s)]
-      }
-      with(_[:abs, name, tyname, body]) {
-        arg_ts = TypeScheme.new([], TyRaw[tyname])
+      with(_[:abs, name, opt_tyname, body]) {
+        arg_ty = opt_tyname ? TyRaw[opt_tyname] : TyVar[gen_id()]
+        arg_ts = TypeScheme.new([], arg_ty)
         inner_assump = assump.merge(name => arg_ts)
 
         s, body_type = infer(inner_assump, body)

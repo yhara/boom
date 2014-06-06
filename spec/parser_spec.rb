@@ -15,7 +15,7 @@ describe Parser do
   it 'anonfunc' do
     src = "fn(x){ 1 }"
     expect(parse(src)).to eq(
-      [:abs, "x", [:lit, "int", 1]]
+      [:abs, "x", nil, [:lit, "int", 1]]
     )
   end
 
