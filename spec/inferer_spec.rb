@@ -68,5 +68,12 @@ describe TypeInference do
          ty_int_int]
       )
     end
+
+    it 'abs with type annotation' do
+      expr = [:abs, "x", "int", [:var, "x"]]
+      expect(infer(expr)).to eq(
+        [{}, TyFun[TyRaw["int"], TyRaw["int"]]]
+      )
+    end
   end
 end

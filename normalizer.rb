@@ -19,7 +19,7 @@ class Normalizer
       with(_[:APP, funexpr, argexpr]) {
         [:app, normalize(funexpr), normalize(argexpr)]
       }
-      with(_[:SEQ, _[:DEFUN, funname, argname, body], expr2]) {
+      with(_[:SEQ, _[:DEFUN, funname, argname, argtyname, body], expr2]) {
         [:let, funname,
           [:abs, argname, normalize(body)],
           normalize(expr2)]

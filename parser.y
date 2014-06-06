@@ -13,8 +13,8 @@ rule
   stmt: expr | defun | defvar
 
   defun: 
-    DEF_ _IDENT LPAREN _IDENT RPAREN expr END_
-    { [:DEFUN, val[1], val[3], val[5]] }
+    DEF_ _IDENT LPAREN _IDENT COLON _IDENT RPAREN expr END_
+    { [:DEFUN, val[1], val[3], val[5], val[7]] }
 
   defvar:
     _IDENT EQ expr
@@ -96,6 +96,7 @@ require 'strscan'
 
   def parse(str)
     @s = StringScanner.new(str)
+    #@yydebug = true
     yyparse self, :scan
   end
 

@@ -244,6 +244,13 @@ class TypeInference
         s, body_type = infer(inner_assump, body)
         [s, TyFun[arg_ts.type, body_type].substitute(s)]
       }
+      with(_[:abs, name, tyname, body]) {
+        arg_ts = TypeScheme.new([], TyRaw[tyname])
+        inner_assump = assump.merge(name => arg_ts)
+
+        s, body_type = infer(inner_assump, body)
+        [s, TyFun[arg_ts.type, body_type].substitute(s)]
+      }
       with(_[:let, name, var_expr, body_expr]) {
         s1, var_type = infer(assump, var_expr)
         inner_assump = assump.substitute(s1)
