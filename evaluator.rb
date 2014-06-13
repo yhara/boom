@@ -13,8 +13,8 @@ class Evaluator
   end
 
   include TypeInference::Type
-  INT = TyRaw["int"]
-  STRING = TyRaw["string"]
+  INT = TyRaw["Int"]
+  STRING = TyRaw["String"]
   LIBRARY = {
     "print" => [TyFun[STRING, STRING], ->(system, arg) { system.out.print(arg); arg }]
   }

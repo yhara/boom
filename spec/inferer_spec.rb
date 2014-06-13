@@ -8,9 +8,9 @@ describe TypeInference do
     end
 
     it 'lit' do
-      expr = [:lit, "int", 7]
+      expr = [:lit, "Int", 7]
       expect(infer(expr)).to eq(
-        [{}, TyRaw["int"]]
+        [{}, TyRaw["Int"]]
       )
     end
 
@@ -22,44 +22,44 @@ describe TypeInference do
     end
 
     it 'app' do
-      expr = [:app, [:abs, "x", nil, [:var, "x"]], [:lit, "int", 7]]
+      expr = [:app, [:abs, "x", nil, [:var, "x"]], [:lit, "Int", 7]]
       expect(infer(expr)).to eq(
-        [{1 => TyRaw["int"], 2 => TyRaw["int"]},
-          TyRaw["int"]]
+        [{1 => TyRaw["Int"], 2 => TyRaw["Int"]},
+          TyRaw["Int"]]
       )
     end
 
     it 'let value' do
-      expr = [:let, "x", [:lit, "int", 7], [:lit, "int", 8]]
+      expr = [:let, "x", [:lit, "Int", 7], [:lit, "Int", 8]]
       expect(infer(expr)).to eq(
-        [{}, TyRaw["int"]]
+        [{}, TyRaw["Int"]]
       )
     end
 
     it 'let func' do
       expr = [:let, "f", [:abs, "x", nil, [:var, "x"]],
-               [:app, [:var, "f"], [:lit, "int", 7]]]
+               [:app, [:var, "f"], [:lit, "Int", 7]]]
       expect(infer(expr)).to eq(
-        [{2 => TyRaw["int"], 3 => TyRaw["int"]},
-          TyRaw["int"]]
+        [{2 => TyRaw["Int"], 3 => TyRaw["Int"]},
+          TyRaw["Int"]]
       )
     end
 
     it 'seq' do
-      expr = [:let, "f", [:abs, "x", nil, [:lit, "int", 8]],
-               [:seq, [:app, [:var, "f"], [:lit, "int", 7]],
-               [:seq, [:app, [:var, "f"], [:lit, "string", "hi"]],
+      expr = [:let, "f", [:abs, "x", nil, [:lit, "Int", 8]],
+               [:seq, [:app, [:var, "f"], [:lit, "Int", 7]],
+               [:seq, [:app, [:var, "f"], [:lit, "String", "hi"]],
                       [:var, "f"]]]]
                      
       expect(infer(expr)).to eq(
-        [{}, TyFun[TyVar[6], TyRaw["int"]]]
+        [{}, TyFun[TyVar[6], TyRaw["Int"]]]
       )
     end
 
     it 'with predefined funcs' do
       expr = [:let, "f", [:abs, "x", nil, [:var, "x"]],
                 [:app, [:var, "f"], [:var, "succ"]]]
-      ty_int_int = TyFun[TyRaw["int"], TyRaw["int"]]
+      ty_int_int = TyFun[TyRaw["Int"], TyRaw["Int"]]
       env = {
         "succ" => ty_int_int,
       }
@@ -70,9 +70,9 @@ describe TypeInference do
     end
 
     it 'abs with type annotation' do
-      expr = [:abs, "x", "int", [:var, "x"]]
+      expr = [:abs, "x", "Int", [:var, "x"]]
       expect(infer(expr)).to eq(
-        [{}, TyFun[TyRaw["int"], TyRaw["int"]]]
+        [{}, TyFun[TyRaw["Int"], TyRaw["Int"]]]
       )
     end
   end

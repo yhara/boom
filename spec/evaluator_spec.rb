@@ -25,7 +25,7 @@ describe Evaluator do
 
   it 'defun' do
     src = <<-EOD
-      def f(x : int)
+      def f(x : Int)
         x
       end
       f(1)

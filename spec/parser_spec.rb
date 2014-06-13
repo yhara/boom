@@ -8,14 +8,14 @@ describe Parser do
   it 'literal' do
     src = "1"
     expect(parse(src)).to eq(
-      [:lit, "int", 1]
+      [:lit, "Int", 1]
     )
   end
 
   it 'anonfunc' do
     src = "fn(x){ 1 }"
     expect(parse(src)).to eq(
-      [:abs, "x", nil, [:lit, "int", 1]]
+      [:abs, "x", nil, [:lit, "Int", 1]]
     )
   end
 
@@ -29,7 +29,7 @@ describe Parser do
   it 'funcall' do
     src = "print(1)"
     expect(parse(src)).to eq(
-      [:app, [:var, "print"], [:lit, "int", 1]]
+      [:app, [:var, "print"], [:lit, "Int", 1]]
     )
   end
 end

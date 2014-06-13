@@ -4,9 +4,9 @@ class Normalizer
       with(_[:CONST, val]) {
         case val
         when Integer
-          [:lit, "int", val]
+          [:lit, "Int", val]
         when String
-          [:lit, "string", val]
+          [:lit, "String", val]
         else raise
         end
       }
