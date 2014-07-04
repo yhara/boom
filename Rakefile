@@ -1,15 +1,16 @@
-file "parser.rb" => ["parser.y"] do
-  sh "bundle exec racc parser.y -o parser.rb"
+file "lib/boom/parser.rb" => ["lib/boom/parser.y"] do
+  sh "bundle exec racc lib/boom/parser.y -o lib/boom/parser.rb"
 end
+task :parser => "lib/boom/parser.rb"
 
 desc "Run test"
-task :spec => ["parser.rb"] do
+task :spec => :parser do
   sh "bundle exec rspec"
 end
 
 desc "Run main"
-task :run => ["parser.rb"] do
-  sh "bundle exec ruby boom.rb"
+task :run => :parser do
+  sh "bundle exec bin/boom #{ARGV.last}"
 end
 
 task default: :spec

@@ -1,11 +1,6 @@
 #!/usr/bin/env ruby
-require 'forwardable'
-require 'pattern-match'
-
-require_relative '../parser.rb'
-require_relative '../normalizer.rb'
-require_relative '../inferer.rb'
-require_relative '../evaluator.rb'
+$LOAD_PATH.unshift "#{__dir__}/../lib"
+require 'boom'
 
 if $0==__FILE__
   Evaluator.run(ARGF.read)
