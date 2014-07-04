@@ -32,6 +32,9 @@ class Normalizer
       with(_[:SEQ, expr1, expr2]) {
         [:seq, normalize(expr1), normalize(expr2)]
       }
+      with(_) {
+        raise "no match: #{ast.inspect}"
+      }
     }
   end
 end
