@@ -32,6 +32,11 @@ class Normalizer
       with(_[:SEQ, expr1, expr2]) {
         [:seq, normalize(expr1), normalize(expr2)]
       }
+      # When :DEFVAR is a last expression
+      with(_[:DEFVAR, varname, expr]) {
+        # Just place the rhs value
+        normalize(expr)
+      }
       with(_) {
         raise "no match: #{ast.inspect}"
       }
