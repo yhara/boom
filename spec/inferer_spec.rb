@@ -3,6 +3,10 @@ include TypeInference::Type
 
 describe TypeInference do
   describe "#infer" do
+    before :each do
+      TypeInference::TyVar.reset_id
+    end
+
     def infer(expr, env={})
       TypeInference.infer(expr, env)
     end

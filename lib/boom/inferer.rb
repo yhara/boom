@@ -114,9 +114,9 @@ class TypeInference
     end
 
     # Create (monomorphic) type from this type scheme
-    def instantiate(idgen)
+    def instantiate
       subst = Subst.new(@ids.map{|id|
-        [id, Type::TyVar[idgen.new_id()]]
+        [id, Type::TyVar.new]
       }.to_h)
 
       return @type.substitute(subst)
@@ -152,8 +152,20 @@ class TypeInference
     end
 
     class TyVar < Base
-      def initialize(id)
-        @id = id
+      @@lastid = 0
+
+      # For unittest
+      def self.reset_id
+        @@lastid = 0
+      end
+
+      def initialize(id=nil)
+        if id
+          @id = id
+        else
+          @@lastid += 1
+          @id = @@lastid
+        end
       end
       attr_reader :id
 
@@ -191,26 +203,11 @@ class TypeInference
   end
   include Type
 
-  class IdGen
-    def initialize
-      @lastid = 0
-    end
-
-    def new_id
-      @lastid += 1
-      @lastid
-    end
-  end
-
   def self.infer(expr, library={})
     assump = Assump.new(library.map{|name, (type, block)|
       [name, TypeScheme.new([], type)]
     }.to_h)
     new.infer(assump, expr)
-  end
-
-  def initialize
-    @idgen = IdGen.new
   end
 
   # Returns [subst, type]
@@ -221,12 +218,12 @@ class TypeInference
       }
       with(_[:var, name]) {
         raise InferenceError, "undefined: #{name}" if not assump.key?(name)
-        var_type = assump[name].instantiate(@idgen)
+        var_type = assump[name].instantiate
 
         [Subst.empty, var_type]
       }
       with(_[:app, func_expr, arg_expr]) {
-        result_type = TyVar[gen_id()]
+        result_type = TyVar.new
 
         s1, func_type = infer(assump, func_expr)
         s2, arg_type = infer(assump.substitute(s1), arg_expr)
@@ -238,7 +235,7 @@ class TypeInference
         [s1.merge(s2, s3), result_type.substitute(s3)]
       }
       with(_[:abs, name, opt_tyname, body]) {
-        arg_ty = opt_tyname ? TyRaw[opt_tyname] : TyVar[gen_id()]
+        arg_ty = opt_tyname ? TyRaw[opt_tyname] : TyVar.new
         arg_ts = TypeScheme.new([], arg_ty)
         inner_assump = assump.merge(name => arg_ts)
 
@@ -293,13 +290,14 @@ class TypeInference
             raise InferenceError, "type mismatch: #{name1} vs #{name2}"
           end
         }
+        with(Constraint.(ty1, ty2)) {
+          raise InferenceError, "unification error\n"+
+                                "  ty1: #{ty1.inspect}\n"+
+                                "  ty2: #{ty2.inspect}\n"
+        }
       }
     end
 
     return subst
-  end
-
-  def gen_id
-    @idgen.new_id
   end
 end
