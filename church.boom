@@ -1,0 +1,6 @@
+t = fn(a){ fn(b){ a }}
+f = fn(a){ fn(b){ b }}
+
+myif = fn(p){ fn(a){ fn(b){ p(a)(b) }}}
+
+print(inspect(myif(t)(1)(2)))

@@ -19,7 +19,10 @@ class Evaluator
   INT = TyRaw["Int"]
   STRING = TyRaw["String"]
   LIBRARY = {
-    "print" => [TyFun[STRING, STRING], ->(system, arg) { system.out.print(arg); arg }]
+    "print" => [TyFun[STRING, STRING],
+      ->(system, arg) { system.out.print(arg); arg }],
+    "inspect" => [TyFun[TyVar.new, STRING],
+      ->(system, arg) { arg.inspect }]
   }
 
   class System
