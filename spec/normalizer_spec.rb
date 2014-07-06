@@ -62,10 +62,13 @@ describe Normalizer do
       ast = Parser.new.parse("
         f(x)
         g(x)
+        h(x)
       ")
       expect(normalize(ast)).to eq(
         [:seq, [:app, [:var, "f"], [:var, "x"]],
-               [:app, [:var, "g"], [:var, "x"]]]
+          [:seq, 
+             [:app, [:var, "g"], [:var, "x"]],
+             [:app, [:var, "h"], [:var, "x"]]]]
       )
     end
   end

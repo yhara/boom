@@ -3,5 +3,9 @@ $LOAD_PATH.unshift "#{__dir__}/../lib"
 require 'boom'
 
 if $0==__FILE__
-  Evaluator.run(ARGF.read)
+  begin
+    Evaluator.run(ARGF.read)
+  rescue TypeInference::InferenceError => ex
+    warn "[InferenceError] #{ex.message}"
+  end
 end

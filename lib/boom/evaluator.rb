@@ -2,7 +2,10 @@ require 'forwardable'
 
 class Evaluator
   def self.run(str, library: LIBRARY, io: [$stdin, $stdout])
-    expr = Parser.parse(str)
+    ast = Parser.new.parse(str)
+    #pp ast: ast
+    expr = Normalizer.new.normalize(ast)
+    #pp expr: expr
     TypeInference.infer(expr, library)
 
     system = System.new(io)

@@ -220,7 +220,7 @@ class TypeInference
         [Subst.empty, TyRaw[typename]]
       }
       with(_[:var, name]) {
-        raise InferenceError if not assump.key?(name)
+        raise InferenceError, "undefined: #{name}" if not assump.key?(name)
         var_type = assump[name].instantiate(@idgen)
 
         [Subst.empty, var_type]

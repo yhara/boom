@@ -19,18 +19,27 @@ class Normalizer
       with(_[:APP, funexpr, argexpr]) {
         [:app, normalize(funexpr), normalize(argexpr)]
       }
-      with(_[:SEQ, _[:DEFUN, funname, argname, argtyname, body], expr2]) {
-        [:let, funname,
-          [:abs, argname, argtyname, normalize(body)],
-          normalize(expr2)]
+      with(_[:SEQ, _[stmt]]) {
+        normalize(stmt)
       }
-      with(_[:SEQ, _[:DEFVAR, varname, expr], expr2]) {
-        [:let, varname,
-          normalize(expr),
-          normalize(expr2)]
-      }
-      with(_[:SEQ, expr1, expr2]) {
-        [:seq, normalize(expr1), normalize(expr2)]
+      with(_[:SEQ, stmts]) {
+        first, *rest = *stmts
+        match(first) {
+          with(_[:DEFUN, funname, argname, argtyname, body]) {
+            [:let, funname,
+              [:abs, argname, argtyname, normalize(body)],
+              normalize([:SEQ, rest])]
+          }
+          with(_[:DEFVAR, varname, expr]) {
+            [:let, varname,
+              normalize(expr),
+              normalize([:SEQ, rest])]
+          }
+          with(_) {
+            [:seq, normalize(first),
+                   normalize([:SEQ, rest])]
+          }
+        }
       }
       # When :DEFVAR is a last expression
       with(_[:DEFVAR, varname, expr]) {

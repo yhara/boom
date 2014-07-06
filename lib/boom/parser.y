@@ -6,9 +6,11 @@ rule
   program: stmts 
 
   stmts: 
-    | stmts stmt
-    { [:SEQ, val[0], val[1]] }
     | stmt
+    | stmt stmt
+    { [:SEQ, [val[0], val[1]]] }
+    | stmts stmt
+    { [:SEQ, val[0][1].push(val[1])] }
 
   stmt: expr | defun | defvar
 
