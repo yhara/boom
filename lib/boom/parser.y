@@ -1,4 +1,4 @@
-class Parser
+class Boom::Parser
   options no_result_var
 rule
   toplevel: program
