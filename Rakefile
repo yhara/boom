@@ -13,4 +13,8 @@ task :run => :parser do
   sh "bundle exec bin/boom #{ARGV.last}"
 end
 
+task :a => :parser do
+  sh "bundle exec bin/boom a.boom"
+end
+
 task default: :spec
