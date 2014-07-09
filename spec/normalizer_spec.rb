@@ -35,17 +35,31 @@ module Boom
     end
 
     context 'SEQ' do
-      it 'DEFUN' do
-        ast = Parser.new.parse("
-          def f(x: Int)
-            1
-          end
-          f(2)
-        ")
-        expect(normalize(ast)).to eq(
-          [:let, "f", [:abs, "x", "Int", [:lit, "Int", 1]],
-            [:app, [:var, "f"], [:lit, "Int", 2]]]
-        )
+      context 'DEFUN' do
+        it 'ident, typeannot and expr' do
+          ast = Parser.new.parse("
+            def f(x: Int)
+              1
+            end
+            f(2)
+          ")
+          expect(normalize(ast)).to eq(
+            [:let, "f", [:abs, "x", "Int", [:lit, "Int", 1]],
+              [:app, [:var, "f"], [:lit, "Int", 2]]]
+          )
+        end
+
+        it 'no ident, typeannot or expr' do
+          ast = Parser.new.parse("
+            def f()
+            end
+            f
+          ")
+          expect(normalize(ast)).to eq(
+            [:let, "f", [:abs, "%dummy", "Unit", [:lit, "Unit", :unit]],
+              [:var, "f"]]
+          )
+        end
       end
 
       it 'DEFVAR' do

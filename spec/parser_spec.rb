@@ -17,6 +17,24 @@ module Boom
       )
     end
 
+    context 'stmt' do
+      context 'defun' do
+        it 'ident, typeannot and expr' do
+          src = "def f(x: Int) 1 end"
+          expect(parse(src)).to eq(
+            [:DEFUN, "f", "x", "Int", [:CONST, 1]]
+          )
+        end
+
+        it 'no ident, typeannot or expr' do
+          src = "def f() end"
+          expect(parse(src)).to eq(
+            [:DEFUN, "f", nil, nil, nil]
+          )
+        end
+      end
+    end
+
     context 'value' do
       it 'anonfunc' do
         src = "fn(x){ 1 }"

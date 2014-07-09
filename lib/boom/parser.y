@@ -15,14 +15,18 @@ rule
   stmt: expr | defun | defvar
 
   defun: 
-    DEF_ _IDENT LPAREN _IDENT COLON _IDENT RPAREN expr END_
-    { [:DEFUN, val[1], val[3], val[5], val[7]] }
+      DEF_ _IDENT LPAREN opt_ident opt_typeannot RPAREN opt_expr END_
+    { [:DEFUN, val[1], val[3], val[4], val[6]] }
 
   defvar:
     _IDENT EQ expr
     { [:DEFVAR, val[0], val[2]] }
 
   expr: value
+
+  opt_expr:
+    /* none */ { nil }
+    | expr { val[0] }
   
   value: anonfunc | funcall | varref | literal
 
@@ -45,6 +49,17 @@ rule
 
   string:
     _STRING { [:CONST, val[0]] }
+
+  opt_typeannot:
+    /* none */ { nil }
+    | typeannot { val[0] }
+
+  typeannot:
+    COLON _IDENT { val[1] }
+
+  opt_ident:
+    /* none */ { nil }
+    | _IDENT { val[0] }
 
 #  toplevel : Term { val[0] }
 #

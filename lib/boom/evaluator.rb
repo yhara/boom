@@ -17,13 +17,19 @@ module Boom
     end
 
     include TypeInference::Type
+    UNIT = TyRaw["Unit"]
+    class Unit
+      UNIT = Unit.new
+    end
     INT = TyRaw["Int"]
     STRING = TyRaw["String"]
     LIBRARY = {
       "print" => [TyFun[STRING, STRING],
         ->(system, arg) { system.out.print(arg); arg }],
       "inspect" => [TyFun[TyVar.new, STRING],
-        ->(system, arg) { arg.inspect }]
+        ->(system, arg) { arg.inspect }],
+      "p" => [TyFun[TyVar.new, STRING],
+        ->(system, arg) { system.out.puts(arg.inspect) }]
     }
 
     class System
@@ -54,7 +60,7 @@ module Boom
     def eval(env, expr)
       match(expr) {
         with(_[:lit, typename, val]) {
-          val
+          (typename == "Unit" ? Unit::UNIT : val)
         }
         with(_[:var, name]) {
           unless env.key?(name)

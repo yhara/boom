@@ -27,8 +27,17 @@ module Boom
           first, *rest = *stmts
           match(first) {
             with(_[:DEFUN, funname, argname, argtyname, body]) {
+              if argname.nil?
+                raise "missing arg name" if argtyname != nil
+                argname_ = "%dummy"
+                argtyname_ = "Unit"
+              else
+                argname_ = argname
+                argtyname_ = argtyname
+              end
+              body_ = body ? normalize(body) : [:lit, "Unit", :unit]
               [:let, funname,
-                [:abs, argname, argtyname, normalize(body)],
+                [:abs, argname_, argtyname_, body_],
                 normalize([:SEQ, rest])]
             }
             with(_[:DEFVAR, varname, expr]) {
@@ -48,7 +57,7 @@ module Boom
           normalize(expr)
         }
         with(_) {
-          raise "no match: #{ast.inspect}"
+          raise "no match/ast: #{ast.inspect}"
         }
       }
     end
