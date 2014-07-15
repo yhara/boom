@@ -6,14 +6,32 @@ module Boom
 
     rule(:program){ stmts }
 
-    rule(:stmts){ expr }
+    rule(:stmts){ defun | defvar | expr }
+    
+    # -- stmt --
+
+    rule(:defun){
+      str('def') >> s >> ident.as(:fname) >> str('(') >>
+        ident.maybe.as(:argname) >>
+        # TODO: typeannot
+        str(')') >>
+        stmts.maybe.as(:stmts) >>
+      str('end')
+    }
+
+    rule(:defvar){ ident.as(:varname) >> str('=') >> expr.as(:expr) }
 
     # -- expr --
     
-    rule(:expr){ funcall | varref | literal }
+    rule(:expr){ anonfunc | funcall | varref | literal }
+
+    rule(:anonfunc){
+      str('fn(') >> ident.as(:parameter) >> str('){') >>
+      stmts.as(:stmts) >> str('}')
+    }
 
     rule(:funcall){
-      receiver.as(:receiver) >> str('(') >> varref.as(:argument) >> str(')')
+      receiver.as(:receiver) >> str('(') >> expr.as(:argument) >> str(')')
     }
 
     rule(:receiver){ parenexpr | varref }
@@ -21,7 +39,17 @@ module Boom
 
     rule(:varref){ ident.as(:varref) }
 
-    rule(:ident){ match('[_a-z]') >> match('[_a-zA-Z0-9]').repeat }
+    # -- names --
+
+    rule(:ident){
+      (
+        keyword.absent? >> match('[_a-z]') >> match('[_a-zA-Z0-9]').repeat
+      ).as(:ident)
+    }
+
+    rule(:keyword){
+      %w(if end def).map{|x| str(x)}.inject(:|)
+    }
 
     # -- literal --
 
@@ -51,13 +79,26 @@ module Boom
   end
  
   class Transformer < Parslet::Transform
-    # funcall
-    rule(:receiver => subtree(:receiver),
-         :argument => subtree(:argument)) {
-      [:APP, receiver, argument]
-    }
+    def self.rule_(*keys, &block)
+      hash = keys.inject({}){|sum, item| sum[item] = subtree(item); sum}
+      rule(hash, &block)
+    end
 
-    rule(:varref => simple(:s)){ [:VARREF, s.to_s] }
+    # defun
+    rule_(:fname, :argname, :stmts){ [:DEFUN, fname, argname, stmts] }
+
+    # defvar
+    rule_(:varname, :expr){ [:DEFVAR, varname, expr] }
+
+    # anonfunc
+    rule_(:parameter, :stmts){ [:ABS, parameter, stmts] }
+    
+    # funcall
+    rule_(:receiver, :argument){ [:APP, receiver, argument] }
+
+    rule_(:varref){ [:VARREF, varref] }
+
+    rule(:ident => simple(:s)){ s.to_s }
 
     # literal
     rule(:const_i => simple(:n)){ [:CONST, n.to_i] }
@@ -71,7 +112,7 @@ begin
   pp parser.root.to_s
 
   require 'parslet/convenience'
-  s = 'asdf(foo)'
+  s = 'def f(x)1end'
   p s: s
   ast = parser.parse_with_debug(s)
   #ast = parser.parse(s)
