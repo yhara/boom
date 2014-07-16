@@ -14,15 +14,16 @@ module Boom
 
     root :program
 
-    rule(:program){ stmts_ }
+    rule(:program){ stmts.maybe }
 
     rule(:stmts){ 
-      (s_ >> (
+      ss_ >>
+      (
         stmt.as(:first_stmt) >>
         (sp >> stmt).repeat(0).as(:rest_stmts)
-      ) >> s_)
+      ) >>
+      ss_
     }
-    rule(:stmts_){ stmts.maybe }
       
     rule(:stmt){ defun | defvar | expr }
     
@@ -33,11 +34,14 @@ module Boom
         ident.maybe.as(:argname) >>
         typeannot.maybe >>
         str(')') >>
+        sp_ >>
         (stmts.as(:stmts) | s_) >>
       str('end')
     }
 
-    rule(:defvar){ ident.as(:varname) >> str('=') >> expr.as(:expr) }
+    rule(:defvar){
+      ident.as(:varname) >> s_ >> str('=') >> s_ >> expr.as(:expr)
+    }
 
     # -- expr --
     
@@ -45,7 +49,8 @@ module Boom
 
     rule(:anonfunc){
       str('fn(') >> ident.as(:parameter) >> str('){') >>
-      stmts_.as(:stmts) >> str('}')
+        stmts.as(:stmts) >>
+      str('}')
     }
 
     rule(:funcall){
@@ -107,7 +112,7 @@ module Boom
     rule(:n_){ n.maybe }
     # space or newline
     rule(:ss){ (s | n).repeat(1) }
-    rule(:ss_){ n.maybe }
+    rule(:ss_){ ss.maybe }
     # separator(s) with surrounding space
     rule(:sp){ (s_ >> (n | str(';')) >> s_).repeat(1) }
     rule(:sp_){ sp.maybe }
@@ -158,7 +163,7 @@ begin
 
   require 'parslet/convenience'
   #s = 'def f(x)1;end'
-  s = "def f(x:Int) 1 end"
+  s = "fn(x){ 1 }"
   p s: s
   ast = parser.parse_with_debug(s)
   #ast = parser.parse(s)
