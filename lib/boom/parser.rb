@@ -2,20 +2,38 @@ require 'parslet'
  
 module Boom
   class Parser < Parslet::Parser
+    def self.parse(str)
+      ast = new.parse(str)
+      return Transformer.new.apply(ast)
+    end
+
+    #
+    # Naming conventions
+    # - Add suffix `_' for something optional
+    # 
+
     root :program
 
-    rule(:program){ stmts }
+    rule(:program){ stmts_ }
 
-    rule(:stmts){ defun | defvar | expr }
+    rule(:stmts){ 
+      (s_ >> (
+        stmt.as(:first_stmt) >>
+        (sp >> stmt).repeat(0).as(:rest_stmts)
+      ) >> s_)
+    }
+    rule(:stmts_){ stmts.maybe }
+      
+    rule(:stmt){ defun | defvar | expr }
     
     # -- stmt --
 
     rule(:defun){
       str('def') >> s >> ident.as(:fname) >> str('(') >>
         ident.maybe.as(:argname) >>
-        # TODO: typeannot
+        typeannot.maybe >>
         str(')') >>
-        stmts.maybe.as(:stmts) >>
+        (stmts.as(:stmts) | s_) >>
       str('end')
     }
 
@@ -27,7 +45,7 @@ module Boom
 
     rule(:anonfunc){
       str('fn(') >> ident.as(:parameter) >> str('){') >>
-      stmts.as(:stmts) >> str('}')
+      stmts_.as(:stmts) >> str('}')
     }
 
     rule(:funcall){
@@ -39,6 +57,12 @@ module Boom
 
     rule(:varref){ ident.as(:varref) }
 
+    # -- util --
+
+    rule(:typeannot){
+      str(":") >> s_ >> typename.as(:typename)
+    }
+
     # -- names --
 
     rule(:ident){
@@ -46,9 +70,14 @@ module Boom
         keyword.absent? >> match('[_a-z]') >> match('[_a-zA-Z0-9]').repeat
       ).as(:ident)
     }
+    rule(:typename){
+      (
+        keyword.absent? >> match('[A-Z]') >> match('[_a-zA-Z0-9]').repeat
+      ).as(:typename)
+    }
 
     rule(:keyword){
-      %w(if end def).map{|x| str(x)}.inject(:|)
+      %w(fn if end def).map{|x| str(x)}.inject(:|)
     }
 
     # -- literal --
@@ -70,11 +99,17 @@ module Boom
 #    rule(:sp) { space.maybe }
 
 
-    rule(:s){ match('[\s\t]').repeat(1) }
+    # space (except newline)
+    rule(:s){ match('[ \t]').repeat(1) }
     rule(:s_){ s.maybe }
+    # newline
     rule(:n){ str("\n").repeat(1) }
     rule(:n_){ n.maybe }
-    rule(:sp){ n | str(';') }
+    # space or newline
+    rule(:ss){ (s | n).repeat(1) }
+    rule(:ss_){ n.maybe }
+    # separator(s) with surrounding space
+    rule(:sp){ (s_ >> (n | str(';')) >> s_).repeat(1) }
     rule(:sp_){ sp.maybe }
   end
  
@@ -84,14 +119,22 @@ module Boom
       rule(hash, &block)
     end
 
+    rule_(:first_stmt, :rest_stmts){
+      stmts = [first_stmt] + (rest_stmts || [])
+      [:SEQ, stmts]
+    }
+
     # defun
-    rule_(:fname, :argname, :stmts){ [:DEFUN, fname, argname, stmts] }
+    rule_(:fname, :argname, :typename, :stmts){ [:DEFUN, fname, argname, typename, stmts] }
+    rule_(:fname, :argname, :typename){ [:DEFUN, fname, argname, typename, nil] }
+    rule_(:fname, :argname, :stmts){ [:DEFUN, fname, argname, nil, stmts] }
+    rule_(:fname, :argname){         [:DEFUN, fname, argname, nil, nil] }
 
     # defvar
     rule_(:varname, :expr){ [:DEFVAR, varname, expr] }
 
     # anonfunc
-    rule_(:parameter, :stmts){ [:ABS, parameter, stmts] }
+    rule_(:parameter, :stmts){ [:FN, parameter, stmts] }
     
     # funcall
     rule_(:receiver, :argument){ [:APP, receiver, argument] }
@@ -99,6 +142,7 @@ module Boom
     rule_(:varref){ [:VARREF, varref] }
 
     rule(:ident => simple(:s)){ s.to_s }
+    rule(:typename => simple(:s)){ s.to_s }
 
     # literal
     rule(:const_i => simple(:n)){ [:CONST, n.to_i] }
@@ -106,13 +150,15 @@ module Boom
   end
 end
  
+if $0 == __FILE__
 begin
   require 'pp'
   parser = Boom::Parser.new
   pp parser.root.to_s
 
   require 'parslet/convenience'
-  s = 'def f(x)1end'
+  #s = 'def f(x)1;end'
+  s = "def f(x:Int) 1 end"
   p s: s
   ast = parser.parse_with_debug(s)
   #ast = parser.parse(s)
@@ -121,4 +167,7 @@ begin
   p Boom::Transformer.new.apply(ast)
 rescue Parslet::ParseFailed => e
   puts e.cause.ascii_tree
+  puts "--"
+  puts e
+end
 end
