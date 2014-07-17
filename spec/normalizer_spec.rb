@@ -37,7 +37,7 @@ module Boom
     context 'SEQ' do
       context 'DEFUN' do
         it 'ident, typeannot and expr' do
-          ast = Parser.new.parse("
+          ast = Parser.parse("
             def f(x: Int)
               1
             end
@@ -50,7 +50,7 @@ module Boom
         end
 
         it 'no ident, typeannot or expr' do
-          ast = Parser.new.parse("
+          ast = Parser.parse("
             def f()
             end
             f
@@ -63,7 +63,7 @@ module Boom
       end
 
       it 'DEFVAR' do
-        ast = Parser.new.parse("
+        ast = Parser.parse("
           x = 1
           y = 2
         ")
@@ -74,7 +74,7 @@ module Boom
       end
 
       it 'SEQ' do
-        ast = Parser.new.parse("
+        ast = Parser.parse("
           f(x)
           g(x)
           h(x)

@@ -16,7 +16,7 @@ module Boom
     end
 
     it 'funcall' do
-      expect(run("fn(x){ 1 }(2)")).to eq(1)
+      expect(run("(fn(x){ 1 })(2)")).to eq(1)
     end
 
     it 'library' do
@@ -54,7 +54,7 @@ module Boom
       it 'parse error' do
         expect{
           run("print(")
-        }.to raise_error(Racc::ParseError)
+        }.to raise_error(Parslet::ParseFailed)
       end
 
       it 'type error' do
