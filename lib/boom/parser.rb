@@ -30,11 +30,10 @@ module Boom
     # -- stmt --
 
     rule(:defun){
-      str('def') >> s >> ident.as(:fname) >> str('(') >>
-        ident.maybe.as(:argname) >>
-        typeannot.maybe >>
-        str(')') >>
-        sp_ >>
+      str('def') >> s >> ident.as(:fname) >> str('(') >> ss_ >>
+        ident.maybe.as(:argname) >> s_ >>
+        typeannot.maybe >> s_ >>
+        str(')') >> sp_ >>
         (stmts.as(:stmts) | s_) >>
       str('end')
     }
@@ -163,7 +162,9 @@ begin
 
   require 'parslet/convenience'
   #s = 'def f(x)1;end'
-  s = "fn(x){ 1 }"
+  s = "
+        (fn(x){ 1 })(2)
+      "
   p s: s
   ast = parser.parse_with_debug(s)
   #ast = parser.parse(s)

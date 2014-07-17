@@ -3,7 +3,7 @@ require 'forwardable'
 module Boom
   class Evaluator
     def self.run(str, library: LIBRARY, io: [$stdin, $stdout])
-      ast = Parser.new.parse(str)
+      ast = Parser.parse(str)
       #pp ast: ast
       expr = Normalizer.new.normalize(ast)
       #pp expr: expr
