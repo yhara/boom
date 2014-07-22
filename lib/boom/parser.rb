@@ -25,9 +25,14 @@ module Boom
       ss_
     }
       
-    rule(:stmt){ defun | defvar | expr }
+    rule(:stmt){ defklass | defun | defvar | expr }
     
     # -- stmt --
+    
+    rule(:defklass){
+      str('class') >> s >> classname.as(:classname) >> sp >>
+      str('end')
+    }
 
     rule(:defun){
       str('def') >> s >> ident.as(:fname) >> str('(') >> ss_ >>
@@ -79,6 +84,9 @@ module Boom
         keyword.absent? >> match('[A-Z]') >> match('[_a-zA-Z0-9]').repeat
       ).as(:typename)
     }
+    rule(:classname){
+      typename
+    }
 
     rule(:keyword){
       %w(fn if end def).map{|x| str(x)}.inject(:|)
@@ -127,6 +135,9 @@ module Boom
       stmts = [first_stmt] + (rest_stmts || [])
       [:SEQ, stmts]
     }
+
+    # defklass
+    rule_(:classname){ [:DEFCLASS, classname] }
 
     # defun
     rule_(:fname, :argname, :typename, :stmts){ [:DEFUN, fname, argname, typename, stmts] }

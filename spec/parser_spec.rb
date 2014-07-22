@@ -14,6 +14,13 @@ module Boom
     end
 
     context 'stmt' do
+      it 'defklass' do
+        src = "class A; end"
+        expect(parse(src)).to eq(
+          [:SEQ, [[:DEFCLASS, "A"]]]
+        )
+      end
+
       context 'defun' do
         it 'ident, typeannot and expr' do
           src = "def f(x: Int) 1 end"
