@@ -1,6 +1,26 @@
 module Boom
   class Normalizer
     def normalize(ast)
+      ast_ = match(ast) {
+        with(_[:SEQ, args]) {
+          defklasses, others = args.partition{|x| x.is_a?(Array) && x[0] == :DEFCLASS}
+          if defklasses.empty?
+            [:SEQ, others]
+          else
+            [:WITHDEF, defklasses, others]
+          end
+        }
+        with(_[:DEFCLASS, *args]){
+          [:WITHDEF, [ast], []]
+        }
+        with(_){
+          ast
+        }
+      }
+      normalize_(ast_)
+    end
+
+    def normalize_(ast)
       match(ast) {
         with(_[:CONST, val]) {
           case val
@@ -15,13 +35,13 @@ module Boom
           [:var, varname]
         }
         with(_[:FN, varname, body]) {
-          [:abs, varname, nil, normalize(body)]
+          [:abs, varname, nil, normalize_(body)]
         }
         with(_[:APP, funexpr, argexpr]) {
-          [:app, normalize(funexpr), normalize(argexpr)]
+          [:app, normalize_(funexpr), normalize_(argexpr)]
         }
         with(_[:SEQ, _[stmt]]) {
-          normalize(stmt)
+          normalize_(stmt)
         }
         with(_[:SEQ, stmts]) {
           first, *rest = *stmts
@@ -35,26 +55,32 @@ module Boom
                 argname_ = argname
                 argtyname_ = argtyname
               end
-              body_ = body ? normalize(body) : [:lit, "Unit", :unit]
+              body_ = body ? normalize_(body) : [:lit, "Unit", :unit]
               [:let, funname,
                 [:abs, argname_, argtyname_, body_],
-                normalize([:SEQ, rest])]
+                normalize_([:SEQ, rest])]
             }
             with(_[:DEFVAR, varname, expr]) {
               [:let, varname,
-                normalize(expr),
-                normalize([:SEQ, rest])]
+                normalize_(expr),
+                normalize_([:SEQ, rest])]
             }
             with(_) {
-              [:seq, normalize(first),
-                     normalize([:SEQ, rest])]
+              [:seq, normalize_(first),
+                     normalize_([:SEQ, rest])]
             }
           }
         }
         # When :DEFVAR is a last expression
         with(_[:DEFVAR, varname, expr]) {
           # Just place the rhs value
-          normalize(expr)
+          normalize_(expr)
+        }
+        with(_[:WITHDEF, defs, rest]) {
+          [:withdef, defs.map{|x| normalize_(x)}, rest.map{|x| normalize_(x)}] 
+        }
+        with(_[:DEFCLASS, name]){
+          [:defclass, name]
         }
         with(_) {
           raise "no match/ast: #{ast.inspect}"

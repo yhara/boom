@@ -136,7 +136,7 @@ module Boom
       [:SEQ, stmts]
     }
 
-    # defklass
+    # defclass
     rule_(:classname){ [:DEFCLASS, classname] }
 
     # defun

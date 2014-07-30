@@ -14,7 +14,7 @@ module Boom
     end
 
     context 'stmt' do
-      it 'defklass' do
+      it 'defclass' do
         src = "class A; end"
         expect(parse(src)).to eq(
           [:SEQ, [[:DEFCLASS, "A"]]]

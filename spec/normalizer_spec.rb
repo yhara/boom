@@ -87,5 +87,17 @@ module Boom
         )
       end
     end
+
+    it 'DEFCLASS' do
+      ast = Parser.parse("
+        print(1)
+        class A; end
+      ")
+      expect(normalize(ast)).to eq(
+        [:withdef,
+          [[:defclass, "A"]],
+          [[:app, [:var, "print"], [:lit, "Int", 1]]]],
+      )
+    end
   end
 end
