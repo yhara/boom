@@ -7,7 +7,7 @@ module Boom
           if defklasses.empty?
             [:SEQ, others]
           else
-            [:WITHDEF, defklasses, others]
+            [:WITHDEF, defklasses, [:SEQ, others]]
           end
         }
         with(_[:DEFCLASS, *args]){
@@ -76,8 +76,8 @@ module Boom
           # Just place the rhs value
           normalize_(expr)
         }
-        with(_[:WITHDEF, defs, rest]) {
-          [:withdef, defs.map{|x| normalize_(x)}, rest.map{|x| normalize_(x)}] 
+        with(_[:WITHDEF, defs, body]) {
+          [:withdef, defs.map{|x| normalize_(x)}, normalize_(body)]
         }
         with(_[:DEFCLASS, name]){
           [:defclass, name]

@@ -81,6 +81,16 @@ module Boom
           [{}, TyFun[TyRaw["Int"], TyRaw["Int"]]]
         )
       end
+
+      it 'defclass' do
+        expr = [:withdef,
+                 [[:defclass, "A"]],
+                 [:var, "A"]]
+        expect(infer(expr)).to eq(
+          [{}, TyRaw["A"]]
+        )
+
+      end
     end
   end
 end

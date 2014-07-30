@@ -96,7 +96,7 @@ module Boom
       expect(normalize(ast)).to eq(
         [:withdef,
           [[:defclass, "A"]],
-          [[:app, [:var, "print"], [:lit, "Int", 1]]]],
+          [:app, [:var, "print"], [:lit, "Int", 1]]],
       )
     end
   end

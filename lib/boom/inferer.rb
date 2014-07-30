@@ -257,6 +257,16 @@ module Boom
           s2, ty2 = infer(assump.substitute(s1), expr2)
           [s1.merge(s2), ty2]
         }
+        with(_[:withdef, defs, body_expr]) {
+          newvars = defs.map{|x|
+            match(x){
+              with(_[:defclass, classname]){
+                [classname, TypeScheme.new([], TyRaw[classname])]
+              }
+            }
+          }.to_h
+          infer(assump.merge(newvars), body_expr)
+        }
         with(_) {
           raise ArgumentError, "no match: #{expr.inspect}"
         }
