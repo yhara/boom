@@ -49,7 +49,7 @@ module Boom
 
     # -- expr --
     
-    rule(:expr){ anonfunc | funcall | varref | literal }
+    rule(:expr){ anonfunc | funcall | varref | literal | parenexpr }
 
     rule(:anonfunc){
       str('fn(') >> ident.as(:parameter) >> str('){') >>
@@ -58,10 +58,11 @@ module Boom
     }
 
     rule(:funcall){
-      receiver.as(:receiver) >> str('(') >> expr.as(:argument) >> str(')')
+      (parenexpr | varref).as(:callee) >> str('(') >>
+        expr.as(:argument) >>
+      str(')')
     }
 
-    rule(:receiver){ parenexpr | varref }
     rule(:parenexpr){ str('(') >> expr >> str(')') }
 
     rule(:varref){ ident.as(:varref) }
@@ -152,7 +153,7 @@ module Boom
     rule_(:parameter, :stmts){ [:FN, parameter, stmts] }
     
     # funcall
-    rule_(:receiver, :argument){ [:APP, receiver, argument] }
+    rule_(:callee, :argument){ [:APP, callee, argument] }
 
     rule_(:varref){ [:VARREF, varref] }
 
