@@ -267,6 +267,10 @@ module Boom
           }.to_h
           infer(assump.merge(newvars), body_expr)
         }
+
+        with(_[:defclass, _]){
+          raise "misplaced class definition"
+        }
         with(_) {
           raise ArgumentError, "no match: #{expr.inspect}"
         }
