@@ -35,8 +35,8 @@ module Boom
     }
 
     rule(:defun){
-      str('def') >> s >> ident.as(:fname) >> str('(') >> ss_ >>
-        ident.maybe.as(:argname) >> s_ >>
+      str('def') >> s >> methodname.as(:fname) >> str('(') >> ss_ >>
+        methodname.maybe.as(:argname) >> s_ >>
         typeannot.maybe >> s_ >>
         str(')') >> sp_ >>
         (stmts.as(:stmts) | s_) >>
@@ -44,17 +44,26 @@ module Boom
     }
 
     rule(:defvar){
-      ident.as(:varname) >> s_ >> str('=') >> s_ >> expr.as(:expr)
+      varname.as(:varname) >> s_ >> str('=') >> s_ >> expr.as(:expr)
     }
 
     # -- expr --
     
-    rule(:expr){ anonfunc | funcall | varref | literal | parenexpr }
+    rule(:expr){
+      anonfunc | invocation | funcall | varref | literal | parenexpr
+    }
 
     rule(:anonfunc){
-      str('fn(') >> ident.as(:parameter) >> str('){') >>
+      str('fn(') >> varname.as(:parameter) >> str('){') >>
         stmts.as(:stmts) >>
       str('}')
+    }
+
+    rule(:invocation){
+      (funcall | varref | literal | parenexpr).as(:receiver) >>
+        str('.') >> methodname >> str('(') >>
+        expr.as(:argument) >>
+      str(')')
     }
 
     rule(:funcall){
@@ -65,7 +74,7 @@ module Boom
 
     rule(:parenexpr){ str('(') >> expr >> str(')') }
 
-    rule(:varref){ ident.as(:varref) }
+    rule(:varref){ varname.as(:varref) }
 
     # -- util --
 
@@ -75,11 +84,11 @@ module Boom
 
     # -- names --
 
-    rule(:ident){
-      (
-        keyword.absent? >> match('[_a-z]') >> match('[_a-zA-Z0-9]').repeat
-      ).as(:ident)
+    rule(:smallname){
+      keyword.absent? >> match('[_a-z]') >> match('[_a-zA-Z0-9]').repeat
     }
+    rule(:varname){ smallname.as(:varname) }
+    rule(:methodname){ smallname.as(:methodname) }
     rule(:typename){
       (
         keyword.absent? >> match('[A-Z]') >> match('[_a-zA-Z0-9]').repeat
@@ -151,13 +160,19 @@ module Boom
 
     # anonfunc
     rule_(:parameter, :stmts){ [:FN, parameter, stmts] }
+
+    # invocation
+    rule_(:receiver, :methodname, :argument){
+      [:INVOKE, receiver, methodname, [argument]]
+    }
     
     # funcall
     rule_(:callee, :argument){ [:APP, callee, argument] }
 
     rule_(:varref){ [:VARREF, varref] }
 
-    rule(:ident => simple(:s)){ s.to_s }
+    rule(:varname => simple(:s)){ s.to_s }
+    rule(:methodname => simple(:s)){ s.to_s }
     rule(:typename => simple(:s)){ s.to_s }
 
     # literal
@@ -175,7 +190,7 @@ begin
   require 'parslet/convenience'
   #s = 'def f(x)1;end'
   s = "
-        (fn(x){ 1 })(2)
+        123.to_s(16)
       "
   p s: s
   ast = parser.parse_with_debug(s)

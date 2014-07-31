@@ -89,7 +89,6 @@ module Boom
         expect(infer(expr)).to eq(
           [{}, TyRaw["A"]]
         )
-
       end
     end
   end

@@ -38,11 +38,18 @@ module Boom
       end
     end
 
-    context 'value' do
+    context 'expr' do
       it 'anonfunc' do
         src = "fn(x){ 1 }"
         expect(parse(src)).to eq(
           [:SEQ, [[:FN, "x", [:SEQ, [[:CONST, 1]]]]]]
+        )
+      end
+
+      it 'invocation' do
+        src = "123.to_s(16)"
+        expect(parse(src)).to eq(
+          [:SEQ, [[:INVOKE, [:CONST, 123], "to_s", [[:CONST, 16]]]]]
         )
       end
 
