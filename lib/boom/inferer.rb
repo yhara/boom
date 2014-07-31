@@ -261,7 +261,7 @@ module Boom
           newvars = defs.map{|x|
             match(x){
               with(_[:defclass, classname]){
-                [classname, TypeScheme.new([], TyRaw[classname])]
+                [classname, TypeScheme.new([], TyRaw["Class"])]
               }
             }
           }.to_h

@@ -165,7 +165,7 @@ module Boom
     rule_(:receiver, :methodname, :argument){
       [:INVOKE, receiver, methodname, [argument]]
     }
-    
+
     # funcall
     rule_(:callee, :argument){ [:APP, callee, argument] }
 

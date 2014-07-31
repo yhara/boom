@@ -87,7 +87,7 @@ module Boom
                  [[:defclass, "A"]],
                  [:var, "A"]]
         expect(infer(expr)).to eq(
-          [{}, TyRaw["A"]]
+          [{}, TyRaw["Class"]]
         )
       end
     end
