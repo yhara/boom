@@ -25,11 +25,11 @@ module Boom
       ss_
     }
       
-    rule(:stmt){ defklass | defun | defvar | expr }
+    rule(:stmt){ defclass | defun | defvar | expr }
     
     # -- stmt --
     
-    rule(:defklass){
+    rule(:defclass){
       str('class') >> s >> classname.as(:classname) >> sp >>
       str('end')
     }

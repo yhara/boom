@@ -3,11 +3,11 @@ module Boom
     def normalize(ast)
       ast_ = match(ast) {
         with(_[:SEQ, args]) {
-          defklasses, others = args.partition{|x| x.is_a?(Array) && x[0] == :DEFCLASS}
-          if defklasses.empty?
+          defclasses, others = args.partition{|x| x.is_a?(Array) && x[0] == :DEFCLASS}
+          if defclasses.empty?
             [:SEQ, others]
           else
-            [:WITHDEF, defklasses, [:SEQ, others]]
+            [:WITHDEF, defclasses, [:SEQ, others]]
           end
         }
         with(_[:DEFCLASS, *args]){
