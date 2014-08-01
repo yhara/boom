@@ -103,6 +103,11 @@ module Boom
     end
 
     class TypeScheme
+      # Create a TypeScheme with no type variables
+      def self.mono(type)
+        new([], type)
+      end
+
       # - ids : Array of Fixnum
       def initialize(ids, type)
         @ids = ids.uniq
@@ -116,6 +121,8 @@ module Boom
 
       # Create (monomorphic) type from this type scheme
       def instantiate
+        return @type if @ids.empty?
+
         subst = Subst.new(@ids.map{|id|
           [id, Type::TyVar.new]
         }.to_h)
@@ -218,7 +225,7 @@ module Boom
           [Subst.empty, TyRaw[typename]]
         }
         with(_[:var, name]) {
-          raise InferenceError, "undefined: #{name}" if not assump.key?(name)
+          raise InferenceError, "`#{name}' is not defined" if not assump.key?(name)
           var_type = assump[name].instantiate
 
           [Subst.empty, var_type]
@@ -258,13 +265,15 @@ module Boom
           [s1.merge(s2), ty2]
         }
         with(_[:withdef, defs, body_expr]) {
-          newvars = defs.map{|x|
+          newvars = defs.flat_map{|x|
             match(x){
               with(_[:defclass, classname]){
-                [classname, TypeScheme.new([], TyRaw["Class"])]
+                {classname => TypeScheme.mono(TyRaw["Class"]),
+                 "#{classname}.new" => TypeScheme.mono(
+                   TyFun[TyRaw["Unit"], TyRaw[classname]])}
               }
             }
-          }.to_h
+          }.inject({}, :merge)
           infer(assump.merge(newvars), body_expr)
         }
 
@@ -272,7 +281,7 @@ module Boom
           raise "misplaced class definition"
         }
         with(_) {
-          raise ArgumentError, "no match: #{expr.inspect}"
+          raise ArgumentError, "infer: no match: #{expr.inspect}"
         }
       }
     end

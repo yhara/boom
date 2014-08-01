@@ -62,7 +62,7 @@ module Boom
     rule(:invocation){
       (funcall | varref | literal | parenexpr).as(:receiver) >>
         str('.') >> methodname >> str('(') >>
-        expr.as(:argument) >>
+        expr.maybe.as(:argument) >>
       str(')')
     }
 
@@ -74,7 +74,7 @@ module Boom
 
     rule(:parenexpr){ str('(') >> expr >> str(')') }
 
-    rule(:varref){ varname.as(:varref) }
+    rule(:varref){ (varname | classname).as(:varref) }
 
     # -- util --
 
@@ -163,7 +163,11 @@ module Boom
 
     # invocation
     rule_(:receiver, :methodname, :argument){
-      [:INVOKE, receiver, methodname, [argument]]
+      if argument
+        [:INVOKE, receiver, methodname, [argument]]
+      else
+        [:INVOKE, receiver, methodname, []]
+      end
     }
 
     # funcall
@@ -185,12 +189,13 @@ if $0 == __FILE__
 begin
   require 'pp'
   parser = Boom::Parser.new
-  pp parser.root.to_s
 
   require 'parslet/convenience'
   #s = 'def f(x)1;end'
   s = "
-        123.to_s(16)
+          class A
+          end
+          A.new
       "
   p s: s
   ast = parser.parse_with_debug(s)

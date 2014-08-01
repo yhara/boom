@@ -4,6 +4,10 @@ module Boom
   include TypeInference::Type
 
   describe TypeInference do
+    def process(str)
+      Normalizer.new.normalize(Parser.parse(str))
+    end
+
     describe "#infer" do
       before :each do
         TyVar.reset_id
@@ -83,11 +87,22 @@ module Boom
       end
 
       it 'defclass' do
-        expr = [:withdef,
-                 [[:defclass, "A"]],
-                 [:var, "A"]]
+        expr = process("
+          class A; end
+          A
+        ")
         expect(infer(expr)).to eq(
           [{}, TyRaw["Class"]]
+        )
+      end
+
+      it 'instance' do
+        expr = process("
+          class A; end
+          A.new()
+        ")
+        expect(infer(expr)).to eq(
+          [{1 => TyRaw["A"]}, TyRaw["A"]]
         )
       end
     end

@@ -40,6 +40,10 @@ module Boom
         with(_[:APP, funexpr, argexpr]) {
           [:app, normalize_(funexpr), normalize_(argexpr)]
         }
+        with(_[:INVOKE, _[:VARREF, classname], name, args]){
+          raise "TODO" unless name == "new"
+          [:app, [:var, "#{classname}.new"], [:lit, "Unit", :unit]]
+        }
         with(_[:SEQ, _[stmt]]) {
           normalize_(stmt)
         }
