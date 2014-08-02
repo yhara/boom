@@ -83,8 +83,24 @@ module Boom
         with(_[:WITHDEF, defs, body]) {
           [:withdef, defs.map{|x| normalize_(x)}, normalize_(body)]
         }
-        with(_[:DEFCLASS, name]){
-          [:defclass, name]
+        with(_[:DEFCLASS, name, defs]){
+          defs_ = defs.map{|d|
+            match(d){
+              with(_[:DEFUN, funname, argname, argtyname, body]) {
+                if argname.nil?
+                  raise "missing arg name" if argtyname != nil
+                  argname_ = "%dummy"
+                  argtyname_ = "Unit"
+                else
+                  argname_ = argname
+                  argtyname_ = argtyname
+                end
+                body_ = body ? normalize_(body) : [:lit, "Unit", :unit]
+                [:defmethod, funname, argname_, argtyname_, body_]
+              }
+            }
+          }
+          [:defclass, name, defs_]
         }
         with(_) {
           raise "no match/ast: #{ast.inspect}"

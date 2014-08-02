@@ -17,7 +17,7 @@ module Boom
       it 'defclass' do
         src = "class A; end"
         expect(parse(src)).to eq(
-          [:SEQ, [[:DEFCLASS, "A"]]]
+          [:SEQ, [[:DEFCLASS, "A", []]]]
         )
       end
 

@@ -31,6 +31,7 @@ module Boom
     
     rule(:defclass){
       str('class') >> s >> classname.as(:classname) >> sp >>
+        stmts.maybe.as(:stmts) >>
       str('end')
     }
 
@@ -147,7 +148,14 @@ module Boom
     }
 
     # defclass
-    rule_(:classname){ [:DEFCLASS, classname] }
+    rule_(:classname, :stmts){
+      if stmts.nil?
+        [:DEFCLASS, classname, []]
+      else
+        raise "stmts not wrapped with :SEQ: #{stmts.inspect}" unless stmts[0] == :SEQ
+        [:DEFCLASS, classname, stmts[1]]
+      end
+    }
 
     # defun
     rule_(:fname, :argname, :typename, :stmts){ [:DEFUN, fname, argname, typename, stmts] }

@@ -267,7 +267,7 @@ module Boom
         with(_[:withdef, defs, body_expr]) {
           newvars = defs.flat_map{|x|
             match(x){
-              with(_[:defclass, classname]){
+              with(_[:defclass, classname, defs]){
                 {classname => TypeScheme.mono(TyRaw["Class"]),
                  "#{classname}.new" => TypeScheme.mono(
                    TyFun[TyRaw["Unit"], TyRaw[classname]])}
