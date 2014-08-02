@@ -1,5 +1,7 @@
 module Boom
   class Normalizer
+    UNIT_EXPR = [:lit, "Unit", :unit]
+
     def normalize(ast)
       ast_ = match(ast) {
         with(_[:SEQ, args]) {
@@ -10,8 +12,9 @@ module Boom
             [:WITHDEF, defclasses, [:SEQ, others]]
           end
         }
+        # Program consists of single class definition
         with(_[:DEFCLASS, *args]){
-          [:WITHDEF, [ast], []]
+          [:WITHDEF, [ast], [:SEQ, []]]
         }
         with(_){
           ast
@@ -42,7 +45,10 @@ module Boom
         }
         with(_[:INVOKE, _[:VARREF, classname], name, args]){
           raise "TODO" unless name == "new"
-          [:app, [:var, "#{classname}.new"], [:lit, "Unit", :unit]]
+          [:app, [:var, "#{classname}.new"], UNIT_EXPR]
+        }
+        with(_[:SEQ, []]) {
+          UNIT_EXPR
         }
         with(_[:SEQ, _[stmt]]) {
           normalize_(stmt)
@@ -59,7 +65,7 @@ module Boom
                 argname_ = argname
                 argtyname_ = argtyname
               end
-              body_ = body ? normalize_(body) : [:lit, "Unit", :unit]
+              body_ = body ? normalize_(body) : UNIT_EXPR
               [:let, funname,
                 [:abs, argname_, argtyname_, body_],
                 normalize_([:SEQ, rest])]
@@ -81,7 +87,11 @@ module Boom
           normalize_(expr)
         }
         with(_[:WITHDEF, defs, body]) {
-          [:withdef, defs.map{|x| normalize_(x)}, normalize_(body)]
+          if body.nil?
+            [:withdef, defs.map{|x| normalize_(x)}, UNIT_EXPR]
+          else
+            [:withdef, defs.map{|x| normalize_(x)}, normalize_(body)]
+          end
         }
         with(_[:DEFCLASS, name, defs]){
           defs_ = defs.map{|d|
@@ -95,8 +105,11 @@ module Boom
                   argname_ = argname
                   argtyname_ = argtyname
                 end
-                body_ = body ? normalize_(body) : [:lit, "Unit", :unit]
+                body_ = body ? normalize_(body) : UNIT_EXPR
                 [:defmethod, funname, argname_, argtyname_, body_]
+              }
+              with(_){
+                raise "invalid statement in class definition: #{d.inspect}"
               }
             }
           }

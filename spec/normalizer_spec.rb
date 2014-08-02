@@ -56,7 +56,7 @@ module Boom
             f
           ")
           expect(normalize(ast)).to eq(
-            [:let, "f", [:abs, "%dummy", "Unit", [:lit, "Unit", :unit]],
+            [:let, "f", [:abs, "%dummy", "Unit", Normalizer::UNIT_EXPR],
               [:var, "f"]]
           )
         end
@@ -88,16 +88,34 @@ module Boom
       end
     end
 
-    it 'DEFCLASS' do
-      ast = Parser.parse("
-        print(1)
-        class A; end
-      ")
-      expect(normalize(ast)).to eq(
-        [:withdef,
-          [[:defclass, "A", []]],
-          [:app, [:var, "print"], [:lit, "Int", 1]]],
-      )
+    context 'class' do
+      it 'DEFCLASS' do
+        ast = Parser.parse("
+          print(1)
+          class A; end
+        ")
+        expect(normalize(ast)).to eq(
+          [:withdef,
+            [[:defclass, "A", []]],
+            [:app, [:var, "print"], [:lit, "Int", 1]]],
+        )
+      end
+
+      it 'method' do
+        ast = Parser.parse("
+          class A
+            def x(y)
+              1
+            end
+          end
+        ")
+        expect(normalize(ast)).to eq(
+          [:withdef,
+            [[:defclass, "A", [
+              [:defmethod, "x", "y", nil, [:lit, "Int", 1]]]]],
+            Normalizer::UNIT_EXPR]
+        )
+      end
     end
   end
 end
