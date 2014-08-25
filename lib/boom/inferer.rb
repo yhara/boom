@@ -45,7 +45,7 @@ module Boom
       end
 
       def initialize(hash={})
-        @hash = hash  # id(String) => type
+        @hash = hash  # id(Integer) => type
       end
 
       def_delegators :@hash, :key?, :[], :==
@@ -62,7 +62,7 @@ module Boom
       end
 
       def merge(*others)
-        constraints = others.flat_map(&:to_constr)
+        constraints = ([self]+others).flat_map(&:to_constr)
         return TypeInference.unify(*constraints)
       end
 
@@ -102,13 +102,17 @@ module Boom
       end
     end
 
+    # Represents a monomorhpic/polymorphic type.
     class TypeScheme
       # Create a TypeScheme with no type variables
       def self.mono(type)
         new([], type)
       end
 
-      # - ids : Array of Fixnum
+      # - ids : type variables (Array of Fixnum)
+      #
+      # - type : instance of Type 
+      #   May contain type variable(TyVar)
       def initialize(ids, type)
         @ids = ids.uniq
         @type = type
@@ -136,6 +140,7 @@ module Boom
       end
     end
 
+    # Represents a monomorphic type.
     module Type
       class Base
         include PatternMatch::Deconstructable
