@@ -22,7 +22,7 @@ module Boom
         stmt.as(:first_stmt) >>
         (sp >> stmt).repeat(0).as(:rest_stmts)
       ) >>
-      ss_
+      ssp_
     }
       
     rule(:stmt){ defclass | defun | defvar | expr }
@@ -100,7 +100,7 @@ module Boom
     }
 
     rule(:keyword){
-      %w(fn if end def).map{|x| str(x)}.inject(:|)
+      %w(fn if end def class).map{|x| str(x)}.inject(:|)
     }
 
     # -- literal --
@@ -134,6 +134,8 @@ module Boom
     # separator(s) with surrounding space
     rule(:sp){ (s_ >> (n | str(';')) >> s_).repeat(1) }
     rule(:sp_){ sp.maybe }
+    # space, newline or separator
+    rule(:ssp_){ (s | n | str(';')).repeat(0) }
   end
  
   class Transformer < Parslet::Transform
@@ -201,9 +203,7 @@ begin
   require 'parslet/convenience'
   #s = 'def f(x)1;end'
   s = "
-          class A
-          end
-          A.new
+fn(x){ 1 }
       "
   p s: s
   ast = parser.parse_with_debug(s)

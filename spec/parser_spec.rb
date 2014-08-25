@@ -21,6 +21,15 @@ module Boom
         )
       end
 
+      it 'defmethod' do
+        src = "class A; def foo(x); x; end; end"
+        expect(parse(src)).to eq(
+          [:SEQ, [[:DEFCLASS, "A", [
+            [:DEFUN, "foo", "x", nil, [:SEQ, [[:VARREF, "x"]]]]
+          ]]]]
+        )
+      end
+
       context 'defun' do
         it 'ident, typeannot and expr' do
           src = "def f(x: Int) 1 end"
