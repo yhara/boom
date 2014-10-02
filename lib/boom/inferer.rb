@@ -2,7 +2,7 @@ module Boom
   class TypeInference
     module HashApply
       refine Hash do
-        def apply(&block)
+        def map_v(&block)
           self.map{|k, v| [k, block.call(v)]}.to_h
         end
       end
@@ -56,7 +56,7 @@ module Boom
 
       def add(id, type)
         Subst.new(
-          @hash.apply{|ty| ty.substitute(Subst[id, type])}
+          @hash.map_v{|ty| ty.substitute(Subst[id, type])}
                .merge({id => type})
         )
       end
@@ -88,7 +88,7 @@ module Boom
       end
 
       def substitute(subst)
-        Assump.new(@hash.apply{|ts| ts.substitute(subst)})
+        Assump.new(@hash.map_v{|ts| ts.substitute(subst)})
       end
 
       # Create polymorphic typescheme
