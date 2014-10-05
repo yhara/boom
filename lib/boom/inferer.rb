@@ -12,6 +12,7 @@ module Boom
     class InferenceError < StandardError; end
     class ProgramError < StandardError; end
 
+    # Implies @lt (left type) and @rt (right type) must be equal 
     class Constraint 
       def initialize(lt, rt)
         @lt, @rt = lt, rt
@@ -33,19 +34,23 @@ module Boom
       end
     end
 
+    # Represents type substitution
     class Subst
       extend Forwardable
 
+      # Create new subst with one substitution
       def self.[](id, ty)
         Subst.new({id => ty})
       end
 
+      # Create new empty subst
       def self.empty
         Subst.new({})
       end
 
+      # Create new subst from hash (id(Integer) => type)
       def initialize(hash={})
-        @hash = hash  # id(Integer) => type
+        @hash = hash
       end
 
       def_delegators :@hash, :key?, :[], :==
@@ -54,18 +59,22 @@ module Boom
         @hash
       end
 
+      # Add a substitution {id => type} to this subst
       def add(id, type)
         Subst.new(
+          # Substitute +id+ with +type+ before adding {id => type}
           @hash.map_v{|ty| ty.substitute(Subst[id, type])}
                .merge({id => type})
         )
       end
 
+      # Merge one or more substs using TypeInference.unify
       def merge(*others)
         constraints = ([self]+others).flat_map(&:to_constr)
         return TypeInference.unify(*constraints)
       end
 
+      # Convert this subst into a Constraint
       def to_constr
         @hash.map{|id, ty|
           Constraint.new(Type::TyVar[id], ty)
@@ -93,16 +102,17 @@ module Boom
 
       # Create polymorphic typescheme
       def generalize(type)
-        tss = @hash.values
-        free_type_ids = tss.flat_map(&:free_type_ids)
+        # Collect free type ids from type schemes
+        free_type_ids = @hash.values.flat_map(&:free_type_ids)
 
-        # Types defined in elsewhere should not be type varible 
+        # Type variables = Types contained in `type`
+        # except free types (i.e. types defined in elsewhere)
         typevars = type.var_ids - free_type_ids
         return TypeScheme.new(typevars, type)
       end
     end
 
-    # Represents a monomorhpic/polymorphic type.
+    # Represents a monomorphic/polymorphic type.
     class TypeScheme
       # Create a TypeScheme with no type variables
       def self.mono(type)
@@ -110,7 +120,6 @@ module Boom
       end
 
       # - ids : type variables (Array of Fixnum)
-      #
       # - type : instance of Type 
       #   May contain type variable(TyVar)
       def initialize(ids, type)
@@ -125,12 +134,13 @@ module Boom
 
       # Create (monomorphic) type from this type scheme
       def instantiate
+        # Already monomorphic
         return @type if @ids.empty?
 
+        # Substitute type variable with fresh (monomorphic) TyVar 
         subst = Subst.new(@ids.map{|id|
           [id, Type::TyVar.new]
         }.to_h)
-
         return @type.substitute(subst)
       end
 
@@ -140,7 +150,7 @@ module Boom
       end
     end
 
-    # Represents a monomorphic type.
+    # Represents a (monomorphic) type.
     module Type
       class Base
         include PatternMatch::Deconstructable
@@ -148,6 +158,7 @@ module Boom
         def self.deconstruct(val); accept_self_instance_only(val); end
       end
 
+      # "Native" types (Int, String, etc.)
       class TyRaw < Base
         def initialize(name)
           @name = name
@@ -164,6 +175,7 @@ module Boom
         def var_ids; []; end
       end
 
+      # A monomorphic type which is yet to be known as TyRaw or TyFun
       class TyVar < Base
         @@lastid = 0
 
@@ -194,6 +206,7 @@ module Boom
         def var_ids; [@id]; end
       end
 
+      # A function type (ty1 -> ty2)
       class TyFun < Base
         def initialize(ty1, ty2)
           @ty1, @ty2 = ty1, ty2
@@ -291,6 +304,7 @@ module Boom
       }
     end
 
+    # Unify +constraints+ into a Subst
     def self.unify(*constraints)
       subst = Subst.new
       consts = constraints.dup
